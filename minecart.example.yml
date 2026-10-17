@@ -1,0 +1,17 @@
+# Minecart configuration template.
+# Copy this file to minecart.yml and adjust as needed.
+
+# Where to install and run the server (relative to the current directory).
+directory: server
+
+server:
+  # Server type: vanilla | paper | fabric | forge | neoforge
+  type: vanilla
+  # Minecraft version. 1.21.4 requires Java 21.
+  version: "1.21.4"
+  # Accept the Minecraft EULA (required).
+  eula: true
+  # Java heap size.
+  memory: "2G"
+  # Extra arguments passed to the server.
+  args: ["nogui"]
