@@ -7,15 +7,26 @@ import (
 
 	"github.com/knadh/koanf/parsers/json"
 	"github.com/knadh/koanf/parsers/yaml"
+	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
 )
 
+// defaults are the global default values, overridden by the file and then
+// environment variables.
+var defaults = map[string]any{
+	"directory": "server",
+}
+
 // Load reads configuration from the file at path, then overlays environment
 // variables (MINECART_*), which take precedence over file values.
 func Load(path string) (*Config, error) {
 	k := koanf.New(".")
+
+	if err := k.Load(confmap.Provider(defaults, "."), nil); err != nil {
+		return nil, fmt.Errorf("load defaults: %w", err)
+	}
 
 	if err := loadFile(k, path); err != nil {
 		return nil, err

@@ -17,9 +17,11 @@ func writeFile(t *testing.T, name, content string) string {
 
 func TestLoadYAML(t *testing.T) {
 	path := writeFile(t, "minecart.yml", `
+directory: server
 server:
   type: paper
   version: "1.21.4"
+  eula: true
   java: "21"
   memory: 2G
   args: ["-nogui"]
@@ -34,11 +36,17 @@ mods:
 		t.Fatalf("Load: %v", err)
 	}
 
+	if cfg.Directory != "server" {
+		t.Errorf("Directory = %q, want %q", cfg.Directory, "server")
+	}
 	if cfg.Server.Type != "paper" {
 		t.Errorf("Server.Type = %q, want %q", cfg.Server.Type, "paper")
 	}
 	if cfg.Server.Version != "1.21.4" {
 		t.Errorf("Server.Version = %q, want %q", cfg.Server.Version, "1.21.4")
+	}
+	if !cfg.Server.Eula {
+		t.Error("Server.Eula = false, want true")
 	}
 	if cfg.Server.Memory != "2G" {
 		t.Errorf("Server.Memory = %q, want %q", cfg.Server.Memory, "2G")
@@ -59,7 +67,7 @@ mods:
 
 func TestLoadJSON(t *testing.T) {
 	path := writeFile(t, "minecart.json", `{
-  "server": {"type": "fabric", "version": "1.21.4"},
+  "server": {"type": "fabric", "version": "1.21.4", "eula": true},
   "mods": [{"name": "lithium", "source": "modrinth", "version": "0.14.0"}]
 }`)
 
@@ -80,6 +88,7 @@ func TestLoadEnvOverridesFile(t *testing.T) {
 server:
   type: paper
   version: "1.21.4"
+  eula: true
   memory: 2G
 `)
 
@@ -112,6 +121,8 @@ func TestLoadMissingFile(t *testing.T) {
 }
 
 func TestValidate(t *testing.T) {
+	valid := ServerConfig{Type: "paper", Version: "1.21.4", Eula: true}
+
 	tests := []struct {
 		name    string
 		cfg     Config
@@ -119,23 +130,28 @@ func TestValidate(t *testing.T) {
 	}{
 		{
 			name:    "valid",
-			cfg:     Config{Server: ServerConfig{Type: "paper", Version: "1.21.4"}},
+			cfg:     Config{Server: valid},
 			wantErr: false,
 		},
 		{
 			name:    "missing type",
-			cfg:     Config{Server: ServerConfig{Version: "1.21.4"}},
+			cfg:     Config{Server: ServerConfig{Version: "1.21.4", Eula: true}},
 			wantErr: true,
 		},
 		{
 			name:    "missing version",
-			cfg:     Config{Server: ServerConfig{Type: "paper"}},
+			cfg:     Config{Server: ServerConfig{Type: "paper", Eula: true}},
+			wantErr: true,
+		},
+		{
+			name:    "missing eula",
+			cfg:     Config{Server: ServerConfig{Type: "paper", Version: "1.21.4"}},
 			wantErr: true,
 		},
 		{
 			name: "mod missing name",
 			cfg: Config{
-				Server: ServerConfig{Type: "paper", Version: "1.21.4"},
+				Server: valid,
 				Mods:   []ModSpec{{Source: "modrinth"}},
 			},
 			wantErr: true,
@@ -143,7 +159,7 @@ func TestValidate(t *testing.T) {
 		{
 			name: "mod missing source",
 			cfg: Config{
-				Server: ServerConfig{Type: "paper", Version: "1.21.4"},
+				Server: valid,
 				Mods:   []ModSpec{{Name: "lithium"}},
 			},
 			wantErr: true,
@@ -157,5 +173,40 @@ func TestValidate(t *testing.T) {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestLoadDirectoryDefault(t *testing.T) {
+	path := writeFile(t, "minecart.yml", `
+server:
+  type: vanilla
+  version: "1.21.4"
+  eula: true
+`)
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Directory != "server" {
+		t.Errorf("Directory = %q, want default %q", cfg.Directory, "server")
+	}
+}
+
+func TestLoadDirectoryOverride(t *testing.T) {
+	path := writeFile(t, "minecart.yml", `
+directory: /srv/minecraft
+server:
+  type: vanilla
+  version: "1.21.4"
+  eula: true
+`)
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Directory != "/srv/minecraft" {
+		t.Errorf("Directory = %q, want %q", cfg.Directory, "/srv/minecraft")
 	}
 }

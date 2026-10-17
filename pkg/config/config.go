@@ -7,14 +7,16 @@ import (
 
 // Config is the top-level minecart configuration.
 type Config struct {
-	Server ServerConfig `koanf:"server"`
-	Mods   []ModSpec    `koanf:"mods"`
+	Directory string       `koanf:"directory"`
+	Server    ServerConfig `koanf:"server"`
+	Mods      []ModSpec    `koanf:"mods"`
 }
 
 // ServerConfig describes the Minecraft server to install and run.
 type ServerConfig struct {
 	Type    string   `koanf:"type"`
 	Version string   `koanf:"version"`
+	Eula    bool     `koanf:"eula"`
 	Java    string   `koanf:"java"`
 	Memory  string   `koanf:"memory"`
 	Args    []string `koanf:"args"`
@@ -34,6 +36,9 @@ func (c *Config) Validate() error {
 	}
 	if c.Server.Version == "" {
 		return errors.New("server.version is required")
+	}
+	if !c.Server.Eula {
+		return errors.New("server.eula must be true (accept the Minecraft EULA)")
 	}
 	for i, m := range c.Mods {
 		if m.Name == "" {
