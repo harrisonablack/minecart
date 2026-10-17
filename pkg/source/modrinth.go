@@ -9,12 +9,10 @@ import (
 
 	"github.com/harrisonablack/minecart/pkg/artifact"
 	"github.com/harrisonablack/minecart/pkg/config"
+	"github.com/harrisonablack/minecart/pkg/version"
 )
 
-const (
-	modrinthBaseURL = "https://api.modrinth.com/v2"
-	userAgent       = "minecart/0.1 (github.com/harrisonablack/minecart)"
-)
+const modrinthBaseURL = "https://api.modrinth.com/v2"
 
 // Modrinth resolves mods from the Modrinth API.
 //
@@ -43,7 +41,7 @@ func (m Modrinth) Resolve(ctx context.Context, spec config.ModSpec) (artifact.Ar
 	if err != nil {
 		return artifact.Artifact{}, fmt.Errorf("build request: %w", err)
 	}
-	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("User-Agent", version.UserAgent)
 
 	resp, err := client.Do(req)
 	if err != nil {

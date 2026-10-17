@@ -10,9 +10,8 @@ import (
 	"path/filepath"
 
 	"github.com/harrisonablack/minecart/pkg/artifact"
+	"github.com/harrisonablack/minecart/pkg/version"
 )
-
-const userAgent = "minecart/0.1 (github.com/harrisonablack/minecart)"
 
 // Download fetches the artifact and writes it into dir, skipping when the file
 // is already present and verified.
@@ -47,7 +46,7 @@ func download(ctx context.Context, logger *slog.Logger, a artifact.Artifact, des
 	if err != nil {
 		return fmt.Errorf("build request: %w", err)
 	}
-	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("User-Agent", version.UserAgent)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

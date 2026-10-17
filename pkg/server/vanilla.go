@@ -8,12 +8,10 @@ import (
 	"time"
 
 	"github.com/harrisonablack/minecart/pkg/artifact"
+	"github.com/harrisonablack/minecart/pkg/version"
 )
 
-const (
-	vanillaManifestURL = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
-	userAgent          = "minecart/0.1 (github.com/harrisonablack/minecart)"
-)
+const vanillaManifestURL = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
 
 // vanilla resolves a vanilla server jar from Mojang's version manifest.
 //
@@ -95,7 +93,7 @@ func getJSON(ctx context.Context, client *http.Client, url string, out any) erro
 	if err != nil {
 		return fmt.Errorf("build request: %w", err)
 	}
-	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("User-Agent", version.UserAgent)
 
 	resp, err := client.Do(req)
 	if err != nil {
