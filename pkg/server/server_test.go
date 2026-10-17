@@ -9,6 +9,14 @@ import (
 	"github.com/harrisonablack/minecart/pkg/config"
 )
 
+// writeResponse writes body to w, failing the test on error.
+func writeResponse(t *testing.T, w http.ResponseWriter, body string) {
+	t.Helper()
+	if _, err := w.Write([]byte(body)); err != nil {
+		t.Errorf("write response: %v", err)
+	}
+}
+
 // newVanillaServer serves a manifest at /manifest and a version at /version,
 // with the manifest's version URL pointing back at the test server.
 func newVanillaServer(t *testing.T, versionJSON string) *httptest.Server {
@@ -17,9 +25,9 @@ func newVanillaServer(t *testing.T, versionJSON string) *httptest.Server {
 	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/manifest":
-			w.Write([]byte(`{"versions": [{"id": "26.3", "url": "` + srv.URL + `/version"}]}`))
+			writeResponse(t, w, `{"versions": [{"id": "26.3", "url": "`+srv.URL+`/version"}]}`)
 		case "/version":
-			w.Write([]byte(versionJSON))
+			writeResponse(t, w, versionJSON)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}

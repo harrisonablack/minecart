@@ -24,7 +24,7 @@ func New(w io.Writer) *slog.Logger {
 		return slog.New(slog.NewJSONHandler(w, &slog.HandlerOptions{Level: lvl}))
 	}
 
-	return slog.New(tint.NewHandler(w, &tint.Options{
+	return slog.New(tint.NewTextHandler(w, &tint.Options{
 		Level:      lvl,
 		TimeFormat: time.RFC3339,
 		AddSource:  true,

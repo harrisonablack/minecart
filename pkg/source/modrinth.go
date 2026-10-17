@@ -49,7 +49,7 @@ func (m Modrinth) Resolve(ctx context.Context, spec config.ModSpec) (artifact.Ar
 	if err != nil {
 		return artifact.Artifact{}, fmt.Errorf("request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return artifact.Artifact{}, fmt.Errorf("modrinth: unexpected status %d for %s@%s", resp.StatusCode, spec.Name, spec.Version)

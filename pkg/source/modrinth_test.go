@@ -16,6 +16,14 @@ func newModrinthServer(t *testing.T, handler http.HandlerFunc) *httptest.Server 
 	return srv
 }
 
+// writeResponse writes body to w, failing the test on error.
+func writeResponse(t *testing.T, w http.ResponseWriter, body string) {
+	t.Helper()
+	if _, err := w.Write([]byte(body)); err != nil {
+		t.Errorf("write response: %v", err)
+	}
+}
+
 func TestModrinthResolve(t *testing.T) {
 	srv := newModrinthServer(t, func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/project/fabric-api/version/0.163.0" {
@@ -25,7 +33,7 @@ func TestModrinthResolve(t *testing.T) {
 			t.Error("missing User-Agent header")
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{
+		writeResponse(t, w, `{
 			"version_number": "0.163.0",
 			"files": [{
 				"hashes": {"sha1": "abc123", "sha512": "def456"},
@@ -34,7 +42,7 @@ func TestModrinthResolve(t *testing.T) {
 				"primary": true,
 				"size": 1774707
 			}]
-		}`))
+		}`)
 	})
 
 	m := Modrinth{baseURL: srv.URL}
@@ -65,12 +73,12 @@ func TestModrinthResolve(t *testing.T) {
 func TestModrinthResolvePicksPrimary(t *testing.T) {
 	srv := newModrinthServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{
+		writeResponse(t, w, `{
 			"files": [
 				{"url": "https://cdn.example.com/sources.jar", "filename": "sources.jar", "primary": false, "size": 100},
 				{"url": "https://cdn.example.com/mod.jar", "filename": "mod.jar", "primary": true, "size": 200}
 			]
-		}`))
+		}`)
 	})
 
 	m := Modrinth{baseURL: srv.URL}
@@ -86,11 +94,11 @@ func TestModrinthResolvePicksPrimary(t *testing.T) {
 func TestModrinthResolveFallsBackToFirstFile(t *testing.T) {
 	srv := newModrinthServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{
+		writeResponse(t, w, `{
 			"files": [
 				{"url": "https://cdn.example.com/only.jar", "filename": "only.jar", "primary": false, "size": 50}
 			]
-		}`))
+		}`)
 	})
 
 	m := Modrinth{baseURL: srv.URL}
@@ -117,7 +125,7 @@ func TestModrinthResolveNotFound(t *testing.T) {
 func TestModrinthResolveNoFiles(t *testing.T) {
 	srv := newModrinthServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"files": []}`))
+		writeResponse(t, w, `{"files": []}`)
 	})
 
 	m := Modrinth{baseURL: srv.URL}
