@@ -1,0 +1,161 @@
+package config
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func writeFile(t *testing.T, name, content string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), name)
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write %s: %v", name, err)
+	}
+	return path
+}
+
+func TestLoadYAML(t *testing.T) {
+	path := writeFile(t, "minecart.yml", `
+server:
+  type: paper
+  version: "1.21.4"
+  java: "21"
+  memory: 2G
+  args: ["-nogui"]
+mods:
+  - name: fabric-api
+    source: modrinth
+    version: "0.115.0"
+`)
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	if cfg.Server.Type != "paper" {
+		t.Errorf("Server.Type = %q, want %q", cfg.Server.Type, "paper")
+	}
+	if cfg.Server.Version != "1.21.4" {
+		t.Errorf("Server.Version = %q, want %q", cfg.Server.Version, "1.21.4")
+	}
+	if cfg.Server.Memory != "2G" {
+		t.Errorf("Server.Memory = %q, want %q", cfg.Server.Memory, "2G")
+	}
+	if len(cfg.Server.Args) != 1 || cfg.Server.Args[0] != "-nogui" {
+		t.Errorf("Server.Args = %v, want [-nogui]", cfg.Server.Args)
+	}
+	if len(cfg.Mods) != 1 {
+		t.Fatalf("len(Mods) = %d, want 1", len(cfg.Mods))
+	}
+	if cfg.Mods[0].Name != "fabric-api" {
+		t.Errorf("Mods[0].Name = %q, want %q", cfg.Mods[0].Name, "fabric-api")
+	}
+	if cfg.Mods[0].Source != "modrinth" {
+		t.Errorf("Mods[0].Source = %q, want %q", cfg.Mods[0].Source, "modrinth")
+	}
+}
+
+func TestLoadJSON(t *testing.T) {
+	path := writeFile(t, "minecart.json", `{
+  "server": {"type": "fabric", "version": "1.21.4"},
+  "mods": [{"name": "lithium", "source": "modrinth", "version": "0.14.0"}]
+}`)
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Server.Type != "fabric" {
+		t.Errorf("Server.Type = %q, want %q", cfg.Server.Type, "fabric")
+	}
+	if len(cfg.Mods) != 1 || cfg.Mods[0].Name != "lithium" {
+		t.Errorf("Mods = %v, want [lithium]", cfg.Mods)
+	}
+}
+
+func TestLoadEnvOverridesFile(t *testing.T) {
+	path := writeFile(t, "minecart.yml", `
+server:
+  type: paper
+  version: "1.21.4"
+  memory: 2G
+`)
+
+	t.Setenv("MINECART_SERVER_MEMORY", "4G")
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Server.Memory != "4G" {
+		t.Errorf("Server.Memory = %q, want %q (env should override file)", cfg.Server.Memory, "4G")
+	}
+	if cfg.Server.Type != "paper" {
+		t.Errorf("Server.Type = %q, want %q (file value should remain)", cfg.Server.Type, "paper")
+	}
+}
+
+func TestLoadUnsupportedFormat(t *testing.T) {
+	path := writeFile(t, "minecart.toml", "server = {}")
+
+	if _, err := Load(path); err == nil {
+		t.Fatal("Load: expected error for unsupported format, got nil")
+	}
+}
+
+func TestLoadMissingFile(t *testing.T) {
+	if _, err := Load(filepath.Join(t.TempDir(), "nope.yml")); err == nil {
+		t.Fatal("Load: expected error for missing file, got nil")
+	}
+}
+
+func TestValidate(t *testing.T) {
+	tests := []struct {
+		name    string
+		cfg     Config
+		wantErr bool
+	}{
+		{
+			name:    "valid",
+			cfg:     Config{Server: ServerConfig{Type: "paper", Version: "1.21.4"}},
+			wantErr: false,
+		},
+		{
+			name:    "missing type",
+			cfg:     Config{Server: ServerConfig{Version: "1.21.4"}},
+			wantErr: true,
+		},
+		{
+			name:    "missing version",
+			cfg:     Config{Server: ServerConfig{Type: "paper"}},
+			wantErr: true,
+		},
+		{
+			name: "mod missing name",
+			cfg: Config{
+				Server: ServerConfig{Type: "paper", Version: "1.21.4"},
+				Mods:   []ModSpec{{Source: "modrinth"}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "mod missing source",
+			cfg: Config{
+				Server: ServerConfig{Type: "paper", Version: "1.21.4"},
+				Mods:   []ModSpec{{Name: "lithium"}},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.cfg.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}

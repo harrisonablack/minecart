@@ -1,0 +1,47 @@
+package config
+
+import (
+	"errors"
+	"fmt"
+)
+
+// Config is the top-level minecart configuration.
+type Config struct {
+	Server ServerConfig `koanf:"server"`
+	Mods   []ModSpec    `koanf:"mods"`
+}
+
+// ServerConfig describes the Minecraft server to install and run.
+type ServerConfig struct {
+	Type    string   `koanf:"type"`
+	Version string   `koanf:"version"`
+	Java    string   `koanf:"java"`
+	Memory  string   `koanf:"memory"`
+	Args    []string `koanf:"args"`
+}
+
+// ModSpec is a declarative description of a single mod to install.
+type ModSpec struct {
+	Name    string `koanf:"name"`
+	Source  string `koanf:"source"`
+	Version string `koanf:"version"`
+}
+
+// Validate reports whether the configuration is complete enough to act on.
+func (c *Config) Validate() error {
+	if c.Server.Type == "" {
+		return errors.New("server.type is required")
+	}
+	if c.Server.Version == "" {
+		return errors.New("server.version is required")
+	}
+	for i, m := range c.Mods {
+		if m.Name == "" {
+			return fmt.Errorf("mods[%d].name is required", i)
+		}
+		if m.Source == "" {
+			return fmt.Errorf("mods[%d].source is required", i)
+		}
+	}
+	return nil
+}
