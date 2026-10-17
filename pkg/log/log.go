@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/lmittmann/tint"
 )
@@ -26,8 +25,7 @@ func New(w io.Writer) *slog.Logger {
 
 	return slog.New(tint.NewTextHandler(w, &tint.Options{
 		Level:      lvl,
-		TimeFormat: time.RFC3339,
-		AddSource:  true,
+		TimeFormat: "15:04",
 	}))
 }
 
