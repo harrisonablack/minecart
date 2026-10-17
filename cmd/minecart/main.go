@@ -1,7 +1,33 @@
 package main
 
-import "fmt"
+import (
+	"context"
+	"os"
+
+	"github.com/harrisonablack/minecart/pkg/config"
+	"github.com/harrisonablack/minecart/pkg/install"
+	"github.com/harrisonablack/minecart/pkg/log"
+	"github.com/harrisonablack/minecart/pkg/run"
+)
 
 func main() {
-	fmt.Println("Hello, World!")
+	logger := log.New(os.Stderr)
+
+	cfg, err := config.Load("minecart.yml")
+	if err != nil {
+		logger.Error("load config", "error", err)
+		os.Exit(1)
+	}
+
+	ctx := context.Background()
+
+	if err := install.Run(ctx, logger, *cfg); err != nil {
+		logger.Error("install", "error", err)
+		os.Exit(1)
+	}
+
+	if err := run.Server(ctx, logger, *cfg); err != nil {
+		logger.Error("run", "error", err)
+		os.Exit(1)
+	}
 }
