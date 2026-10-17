@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/harrisonablack/minecart/pkg/artifact"
 	"github.com/harrisonablack/minecart/pkg/config"
 )
 
@@ -26,7 +27,7 @@ type Modrinth struct {
 
 // Resolve looks up spec.Name (a project slug) and spec.Version on Modrinth
 // and returns the version's primary file as an Artifact.
-func (m Modrinth) Resolve(ctx context.Context, spec config.ModSpec) (Artifact, error) {
+func (m Modrinth) Resolve(ctx context.Context, spec config.ModSpec) (artifact.Artifact, error) {
 	client := m.client
 	if client == nil {
 		client = &http.Client{Timeout: 30 * time.Second}
@@ -40,31 +41,31 @@ func (m Modrinth) Resolve(ctx context.Context, spec config.ModSpec) (Artifact, e
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return Artifact{}, fmt.Errorf("build request: %w", err)
+		return artifact.Artifact{}, fmt.Errorf("build request: %w", err)
 	}
 	req.Header.Set("User-Agent", userAgent)
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return Artifact{}, fmt.Errorf("request: %w", err)
+		return artifact.Artifact{}, fmt.Errorf("request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return Artifact{}, fmt.Errorf("modrinth: unexpected status %d for %s@%s", resp.StatusCode, spec.Name, spec.Version)
+		return artifact.Artifact{}, fmt.Errorf("modrinth: unexpected status %d for %s@%s", resp.StatusCode, spec.Name, spec.Version)
 	}
 
 	var v modrinthVersion
 	if err := json.NewDecoder(resp.Body).Decode(&v); err != nil {
-		return Artifact{}, fmt.Errorf("decode response: %w", err)
+		return artifact.Artifact{}, fmt.Errorf("decode response: %w", err)
 	}
 
 	file, ok := v.primaryFile()
 	if !ok {
-		return Artifact{}, fmt.Errorf("modrinth: no files for %s@%s", spec.Name, spec.Version)
+		return artifact.Artifact{}, fmt.Errorf("modrinth: no files for %s@%s", spec.Name, spec.Version)
 	}
 
-	return Artifact{
+	return artifact.Artifact{
 		Name:     spec.Name,
 		URL:      file.URL,
 		Filename: file.Filename,

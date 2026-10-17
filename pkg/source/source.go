@@ -6,19 +6,11 @@ package source
 import (
 	"context"
 
+	"github.com/harrisonablack/minecart/pkg/artifact"
 	"github.com/harrisonablack/minecart/pkg/config"
 )
 
-// Artifact is a resolved, downloadable file.
-type Artifact struct {
-	Name     string
-	URL      string
-	Filename string
-	Hashes   map[string]string // algorithm -> hex digest (e.g. "sha512": "...")
-	Size     int64             // bytes; 0 when the provider does not report it
-}
-
 // Source resolves a declarative mod spec into a concrete artifact.
 type Source interface {
-	Resolve(ctx context.Context, spec config.ModSpec) (Artifact, error)
+	Resolve(ctx context.Context, spec config.ModSpec) (artifact.Artifact, error)
 }
