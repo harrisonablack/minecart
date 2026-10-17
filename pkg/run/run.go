@@ -3,6 +3,7 @@ package run
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -41,18 +42,40 @@ func Server(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
 	for {
 		select {
 		case sig := <-sigCh:
+			// The vanilla server responds to SIGTERM but ignores SIGINT when
+			// not attached to a terminal, so translate any stop signal to
+			// SIGTERM.
 			logger.Info("forwarding signal to server", "signal", sig.String())
-			if err := cmd.Process.Signal(sig); err != nil {
+			if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
 				logger.Warn("failed to forward signal", "signal", sig.String(), "error", err)
 			}
 		case <-ctx.Done():
 			logger.Info("stopping server")
 			_ = cmd.Process.Signal(syscall.SIGTERM)
-			return <-done
+			return exitError(<-done)
 		case err := <-done:
-			return err
+			return exitError(err)
 		}
 	}
+}
+
+// exitError returns nil when the child exited normally or stopped cleanly
+// after a signal we forwarded, otherwise the exit error.
+func exitError(err error) error {
+	if err == nil {
+		return nil
+	}
+	var exitErr *exec.ExitError
+	if !errors.As(err, &exitErr) {
+		return err
+	}
+	// The JVM exits with 128+signal after a graceful shutdown triggered by
+	// SIGTERM/SIGINT, so treat those as a clean stop.
+	switch exitErr.ExitCode() {
+	case 128 + int(syscall.SIGTERM), 128 + int(syscall.SIGINT):
+		return nil
+	}
+	return err
 }
 
 // buildArgs builds the java command-line arguments for the server.
