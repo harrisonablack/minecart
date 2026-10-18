@@ -15,6 +15,8 @@ func Resolve(ctx context.Context, cfg config.ServerConfig) (artifact.Artifact, e
 	switch cfg.Type {
 	case "vanilla":
 		return vanilla{}.resolve(ctx, cfg.Version)
+	case "paper":
+		return paper{}.resolve(ctx, cfg.Version)
 	default:
 		return artifact.Artifact{}, fmt.Errorf("unknown server type %q", cfg.Type)
 	}
