@@ -1,6 +1,32 @@
 [project]
-site_name = "minecart"
+site_name = "Minecart - Documentation"
 site_url = "https://minecart.dev"
-site_description = "Documentation for minecart"
+site_description = "Documentation for Minecart Minecraft server"
+site_author = "Harrison Black"
+copyright = "Copyright &copy; 2026 Harrison Black"
 docs_dir = "docs"
 site_dir = "site"
+
+repo_url = "https://github.com/harrisonablack/minecart"
+repo_name = "harrisonablack/minecart"
+edit_uri = "edit/main/docs/"
+
+[project.theme.icon]
+repo = "fontawesome/brands/git-alt"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme)"
+toggle.icon = "lucide/sun-moon"
+toggle.name = "Switch to light mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to system preference"
