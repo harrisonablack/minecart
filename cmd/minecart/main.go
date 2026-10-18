@@ -13,7 +13,7 @@ import (
 func main() {
 	logger := log.New(os.Stderr)
 
-	cfg, err := config.Load("minecart.yml")
+	cfg, err := config.LoadDefault()
 	if err != nil {
 		logger.Error("load config", "error", err)
 		os.Exit(1)
