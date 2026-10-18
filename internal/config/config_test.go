@@ -27,7 +27,7 @@ server:
   args: ["-nogui"]
 mods:
   - name: fabric-api
-    source: modrinth
+    provider: modrinth
     version: "0.115.0"
 `)
 
@@ -60,15 +60,15 @@ mods:
 	if cfg.Mods[0].Name != "fabric-api" {
 		t.Errorf("Mods[0].Name = %q, want %q", cfg.Mods[0].Name, "fabric-api")
 	}
-	if cfg.Mods[0].Source != "modrinth" {
-		t.Errorf("Mods[0].Source = %q, want %q", cfg.Mods[0].Source, "modrinth")
+	if cfg.Mods[0].Provider != "modrinth" {
+		t.Errorf("Mods[0].Provider = %q, want %q", cfg.Mods[0].Provider, "modrinth")
 	}
 }
 
 func TestLoadJSON(t *testing.T) {
 	path := writeFile(t, "minecart.json", `{
   "server": {"type": "fabric", "version": "1.21.4", "eula": true},
-  "mods": [{"name": "lithium", "source": "modrinth", "version": "0.14.0"}]
+  "mods": [{"name": "lithium", "provider": "modrinth", "version": "0.14.0"}]
 }`)
 
 	cfg, err := Load(path)
@@ -152,12 +152,12 @@ func TestValidate(t *testing.T) {
 			name: "mod missing name",
 			cfg: Config{
 				Server: valid,
-				Mods:   []ModSpec{{Source: "modrinth"}},
+				Mods:   []ModSpec{{Provider: "modrinth"}},
 			},
 			wantErr: true,
 		},
 		{
-			name: "mod missing source",
+			name: "mod missing provider",
 			cfg: Config{
 				Server: valid,
 				Mods:   []ModSpec{{Name: "lithium"}},

@@ -1,6 +1,6 @@
-// Package server resolves the Minecraft server jar for a given server config.
-// Unlike mods (pkg/source), server types are a fixed set resolved by a switch.
-package server
+// Package platform resolves the Minecraft server jar for a given server config.
+// Unlike mods (provider), server types are a fixed set resolved by a switch.
+package platform
 
 import (
 	"context"

@@ -1,5 +1,5 @@
 // Package artifact defines the shared type for a resolved, downloadable file.
-// Both mod resolution (pkg/source) and server jar resolution (pkg/server)
+// Both mod resolution (provider) and server jar resolution (platform)
 // produce an Artifact.
 package artifact
 
