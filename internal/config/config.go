@@ -17,7 +17,6 @@ type ServerConfig struct {
 	Type    string   `koanf:"type"`
 	Version string   `koanf:"version"`
 	Eula    bool     `koanf:"eula"`
-	Java    string   `koanf:"java"`
 	Memory  string   `koanf:"memory"`
 	Args    []string `koanf:"args"`
 }
