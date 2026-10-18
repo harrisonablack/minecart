@@ -10,12 +10,12 @@ import (
 	"path/filepath"
 
 	"github.com/harrisonablack/minecart/internal/config"
-	"github.com/harrisonablack/minecart/internal/server"
+	"github.com/harrisonablack/minecart/internal/platform"
 )
 
 // Run resolves the server jar, downloads and verifies it, and writes eula.txt.
 func Run(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
-	art, err := server.Resolve(ctx, cfg.Server)
+	art, err := platform.Resolve(ctx, cfg.Server)
 	if err != nil {
 		return fmt.Errorf("resolve server: %w", err)
 	}

@@ -1,4 +1,4 @@
-package source
+package provider
 
 import (
 	"context"
@@ -47,7 +47,7 @@ func TestModrinthResolve(t *testing.T) {
 
 	m := Modrinth{baseURL: srv.URL}
 	art, err := m.Resolve(context.Background(), config.ModSpec{
-		Name: "fabric-api", Source: "modrinth", Version: "0.163.0",
+		Name: "fabric-api", Provider: "modrinth", Version: "0.163.0",
 	})
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
@@ -82,7 +82,7 @@ func TestModrinthResolvePicksPrimary(t *testing.T) {
 	})
 
 	m := Modrinth{baseURL: srv.URL}
-	art, err := m.Resolve(context.Background(), config.ModSpec{Name: "x", Source: "modrinth", Version: "1"})
+	art, err := m.Resolve(context.Background(), config.ModSpec{Name: "x", Provider: "modrinth", Version: "1"})
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
@@ -102,7 +102,7 @@ func TestModrinthResolveFallsBackToFirstFile(t *testing.T) {
 	})
 
 	m := Modrinth{baseURL: srv.URL}
-	art, err := m.Resolve(context.Background(), config.ModSpec{Name: "x", Source: "modrinth", Version: "1"})
+	art, err := m.Resolve(context.Background(), config.ModSpec{Name: "x", Provider: "modrinth", Version: "1"})
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
@@ -117,7 +117,7 @@ func TestModrinthResolveNotFound(t *testing.T) {
 	})
 
 	m := Modrinth{baseURL: srv.URL}
-	if _, err := m.Resolve(context.Background(), config.ModSpec{Name: "nope", Source: "modrinth", Version: "1"}); err == nil {
+	if _, err := m.Resolve(context.Background(), config.ModSpec{Name: "nope", Provider: "modrinth", Version: "1"}); err == nil {
 		t.Fatal("Resolve: expected error for 404, got nil")
 	}
 }
@@ -129,13 +129,13 @@ func TestModrinthResolveNoFiles(t *testing.T) {
 	})
 
 	m := Modrinth{baseURL: srv.URL}
-	if _, err := m.Resolve(context.Background(), config.ModSpec{Name: "x", Source: "modrinth", Version: "1"}); err == nil {
+	if _, err := m.Resolve(context.Background(), config.ModSpec{Name: "x", Provider: "modrinth", Version: "1"}); err == nil {
 		t.Fatal("Resolve: expected error for empty files, got nil")
 	}
 }
 
-func TestResolveUnknownSource(t *testing.T) {
-	if _, err := Resolve(context.Background(), config.ModSpec{Name: "x", Source: "unknown", Version: "1"}); err == nil {
-		t.Fatal("Resolve: expected error for unknown source, got nil")
+func TestResolveUnknownProvider(t *testing.T) {
+	if _, err := Resolve(context.Background(), config.ModSpec{Name: "x", Provider: "unknown", Version: "1"}); err == nil {
+		t.Fatal("Resolve: expected error for unknown provider, got nil")
 	}
 }

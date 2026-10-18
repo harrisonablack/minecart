@@ -1,7 +1,7 @@
-// Package source resolves declarative mod specs into concrete downloadable
+// Package provider resolves declarative mod specs into concrete downloadable
 // artifacts. Providers (Modrinth, CurseForge, GitHub, ...) implement the
-// Source interface and are looked up by name through the registry.
-package source
+// Provider interface and are looked up by name through the registry.
+package provider
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/harrisonablack/minecart/internal/config"
 )
 
-// Source resolves a declarative mod spec into a concrete artifact.
-type Source interface {
+// Provider resolves a declarative mod spec into a concrete artifact.
+type Provider interface {
 	Resolve(ctx context.Context, spec config.ModSpec) (artifact.Artifact, error)
 }
