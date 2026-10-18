@@ -1,0 +1,6 @@
+[project]
+site_name = "minecart"
+site_url = "https://minecart.dev"
+site_description = "Documentation for minecart"
+docs_dir = "docs"
+site_dir = "site"
