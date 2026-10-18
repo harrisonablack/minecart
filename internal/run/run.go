@@ -13,11 +13,22 @@ import (
 	"syscall"
 
 	"github.com/harrisonablack/minecart/internal/config"
+	"github.com/harrisonablack/minecart/internal/java"
 )
 
 // Server launches the server as a child process, forwarding stdio and OS
 // signals, and blocks until it exits.
 func Server(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
+	info, err := java.Detect(ctx)
+	if err != nil {
+		return fmt.Errorf("detect java: %w", err)
+	}
+	attrs := []any{"version", info.Version}
+	if info.Vendor != "" {
+		attrs = append(attrs, "vendor", info.Vendor)
+	}
+	logger.Info("resolved java", attrs...)
+
 	args := buildArgs(cfg.Server)
 
 	cmd := exec.Command("java", args...)

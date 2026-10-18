@@ -22,7 +22,6 @@ server:
   type: paper
   version: "1.21.4"
   eula: true
-  java: "21"
   memory: 2G
   args: ["-nogui"]
 mods:
