@@ -12,7 +12,7 @@ import (
 	"os"
 	"sort"
 
-	"github.com/harrisonablack/minecart/pkg/artifact"
+	"github.com/harrisonablack/minecart/internal/artifact"
 )
 
 // hashPriority is the order in which hash algorithms are preferred.

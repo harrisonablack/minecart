@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/harrisonablack/minecart/pkg/artifact"
-	"github.com/harrisonablack/minecart/pkg/config"
+	"github.com/harrisonablack/minecart/internal/artifact"
+	"github.com/harrisonablack/minecart/internal/config"
 )
 
 // registry maps a source name (from config) to its resolver.

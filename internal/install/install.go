@@ -9,8 +9,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/harrisonablack/minecart/pkg/config"
-	"github.com/harrisonablack/minecart/pkg/server"
+	"github.com/harrisonablack/minecart/internal/config"
+	"github.com/harrisonablack/minecart/internal/server"
 )
 
 // Run resolves the server jar, downloads and verifies it, and writes eula.txt.

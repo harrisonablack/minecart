@@ -12,7 +12,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/harrisonablack/minecart/pkg/config"
+	"github.com/harrisonablack/minecart/internal/config"
 )
 
 // Server launches the server as a child process, forwarding stdio and OS
