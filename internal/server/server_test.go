@@ -78,7 +78,7 @@ func TestResolveVanillaVersionNotFound(t *testing.T) {
 }
 
 func TestResolveUnknownType(t *testing.T) {
-	_, err := Resolve(context.Background(), config.ServerConfig{Type: "paper", Version: "1.21.4"})
+	_, err := Resolve(context.Background(), config.ServerConfig{Type: "fabric", Version: "1.21.4"})
 	if err == nil {
 		t.Fatal("Resolve: expected error for unknown type, got nil")
 	}
