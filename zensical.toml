@@ -16,6 +16,7 @@ repo = "fontawesome/brands/git-alt"
 
 [[project.theme.palette]]
 media = "(prefers-color-scheme)"
+scheme = "slate"
 toggle.icon = "lucide/sun-moon"
 toggle.name = "Switch to light mode"
 
