@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/harrisonablack/minecart/pkg/config"
+	"github.com/harrisonablack/minecart/internal/config"
 )
 
 func newModrinthServer(t *testing.T, handler http.HandlerFunc) *httptest.Server {

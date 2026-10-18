@@ -4,10 +4,10 @@ import (
 	"context"
 	"os"
 
-	"github.com/harrisonablack/minecart/pkg/config"
-	"github.com/harrisonablack/minecart/pkg/install"
-	"github.com/harrisonablack/minecart/pkg/log"
-	"github.com/harrisonablack/minecart/pkg/run"
+	"github.com/harrisonablack/minecart/internal/config"
+	"github.com/harrisonablack/minecart/internal/install"
+	"github.com/harrisonablack/minecart/internal/log"
+	"github.com/harrisonablack/minecart/internal/run"
 )
 
 func main() {

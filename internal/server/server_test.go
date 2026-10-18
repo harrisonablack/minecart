@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/harrisonablack/minecart/pkg/config"
+	"github.com/harrisonablack/minecart/internal/config"
 )
 
 // writeResponse writes body to w, failing the test on error.

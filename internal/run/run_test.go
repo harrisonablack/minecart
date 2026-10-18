@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/harrisonablack/minecart/pkg/config"
+	"github.com/harrisonablack/minecart/internal/config"
 )
 
 func TestBuildArgs(t *testing.T) {

@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/harrisonablack/minecart/pkg/artifact"
-	"github.com/harrisonablack/minecart/pkg/config"
-	"github.com/harrisonablack/minecart/pkg/version"
+	"github.com/harrisonablack/minecart/internal/artifact"
+	"github.com/harrisonablack/minecart/internal/config"
+	"github.com/harrisonablack/minecart/internal/version"
 )
 
 const modrinthBaseURL = "https://api.modrinth.com/v2"

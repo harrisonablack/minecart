@@ -9,8 +9,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/harrisonablack/minecart/pkg/artifact"
-	"github.com/harrisonablack/minecart/pkg/version"
+	"github.com/harrisonablack/minecart/internal/artifact"
+	"github.com/harrisonablack/minecart/internal/version"
 )
 
 // Download fetches the artifact and writes it into dir, skipping when the file

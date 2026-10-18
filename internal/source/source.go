@@ -6,8 +6,8 @@ package source
 import (
 	"context"
 
-	"github.com/harrisonablack/minecart/pkg/artifact"
-	"github.com/harrisonablack/minecart/pkg/config"
+	"github.com/harrisonablack/minecart/internal/artifact"
+	"github.com/harrisonablack/minecart/internal/config"
 )
 
 // Source resolves a declarative mod spec into a concrete artifact.

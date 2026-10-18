@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/harrisonablack/minecart/pkg/artifact"
-	"github.com/harrisonablack/minecart/pkg/version"
+	"github.com/harrisonablack/minecart/internal/artifact"
+	"github.com/harrisonablack/minecart/internal/version"
 )
 
 const vanillaManifestURL = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"

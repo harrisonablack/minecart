@@ -6,8 +6,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/harrisonablack/minecart/pkg/artifact"
-	"github.com/harrisonablack/minecart/pkg/config"
+	"github.com/harrisonablack/minecart/internal/artifact"
+	"github.com/harrisonablack/minecart/internal/config"
 )
 
 // Resolve resolves the server jar for the given server config.

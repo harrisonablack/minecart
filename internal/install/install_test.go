@@ -13,7 +13,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/harrisonablack/minecart/pkg/artifact"
+	"github.com/harrisonablack/minecart/internal/artifact"
 )
 
 func discardLogger() *slog.Logger {
