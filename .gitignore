@@ -2,3 +2,5 @@
 /minecart
 /minecart.yml
 /server/
+/site/
+.venv/
