@@ -1,0 +1,18 @@
+services:
+  minecart:
+    build:
+      context: .
+      args:
+        JAVA_VERSION: "25"
+    image: minecart
+    ports:
+      - "25565:25565"
+    volumes:
+      # Mount the example config so it can be edited on the host without
+      # rebuilding the image. Copy it to minecart.yml to customize.
+      - ./minecart.example.yml:/app/minecart.yml:ro
+      - minecart-data:/data
+    restart: unless-stopped
+
+volumes:
+  minecart-data:
