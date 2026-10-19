@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 )
 
@@ -23,6 +24,7 @@ server:
   version: "1.21.4"
   eula: true
   memory: 2G
+  jvm_flags: ["-Xms2G", "-XX:+UseG1GC"]
   args: ["-nogui"]
 mods:
   - name: fabric-api
@@ -49,6 +51,9 @@ mods:
 	}
 	if cfg.Server.Memory != "2G" {
 		t.Errorf("Server.Memory = %q, want %q", cfg.Server.Memory, "2G")
+	}
+	if !slices.Equal(cfg.Server.JvmFlags, []string{"-Xms2G", "-XX:+UseG1GC"}) {
+		t.Errorf("Server.JvmFlags = %v, want [-Xms2G -XX:+UseG1GC]", cfg.Server.JvmFlags)
 	}
 	if len(cfg.Server.Args) != 1 || cfg.Server.Args[0] != "-nogui" {
 		t.Errorf("Server.Args = %v, want [-nogui]", cfg.Server.Args)

@@ -14,6 +14,7 @@ import (
 
 	"github.com/harrisonablack/minecart/internal/config"
 	"github.com/harrisonablack/minecart/internal/java"
+	"github.com/harrisonablack/minecart/internal/manifest"
 )
 
 // Server launches the server as a child process, forwarding stdio and OS
@@ -29,15 +30,31 @@ func Server(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
 	}
 	logger.Info("resolved java", attrs...)
 
-	args := buildArgs(cfg.Server)
+	m, err := manifest.Read(manifest.Path(cfg.Directory))
+	if err != nil {
+		return err
+	}
+	if m.Entry.Type == "" {
+		return fmt.Errorf("no installed server in %q: manifest missing", cfg.Directory)
+	}
 
-	cmd := exec.Command("java", args...)
+	name, args, err := buildCommand(m.Entry, cfg.Server)
+	if err != nil {
+		return err
+	}
+	if m.Entry.Type == manifest.EntryScript && (cfg.Server.Memory != "" || len(cfg.Server.JvmFlags) > 0) {
+		logger.Warn("memory and jvm_flags are ignored for script entries")
+	}
+
+	// exec.Command rather than exec.CommandContext: the latter SIGKILLs the
+	// child on cancellation, which would skip the server's world save.
+	cmd := exec.Command(name, args...)
 	cmd.Dir = cfg.Directory
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	logger.Info("starting server", "command", "java "+strings.Join(args, " "))
+	logger.Info("starting server", "entry", m.Entry.Type, "command", name+" "+strings.Join(args, " "))
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start server: %w", err)
@@ -89,13 +106,29 @@ func exitError(err error) error {
 	return err
 }
 
-// buildArgs builds the java command-line arguments for the server.
-func buildArgs(s config.ServerConfig) []string {
-	var args []string
-	if s.Memory != "" {
-		args = append(args, "-Xmx"+s.Memory)
+// buildCommand builds the command name and arguments that launch entry.
+// Memory and JvmFlags only apply to java entries; script entries manage their
+// own JVM arguments.
+func buildCommand(entry manifest.Entry, s config.ServerConfig) (string, []string, error) {
+	if entry.Point == "" {
+		return "", nil, fmt.Errorf("%s entry has no entry point", entry.Type)
 	}
-	args = append(args, "-jar", "server.jar")
-	args = append(args, s.Args...)
-	return args
+
+	var args []string
+	switch entry.Type {
+	case manifest.EntryJava:
+		args = append(args, s.JvmFlags...)
+		if s.Memory != "" {
+			args = append(args, "-Xmx"+s.Memory)
+		}
+		args = append(args, "-jar", entry.Point)
+		args = append(args, s.Args...)
+		return "java", args, nil
+	case manifest.EntryScript:
+		args = append(args, entry.Point)
+		args = append(args, s.Args...)
+		return "sh", args, nil
+	default:
+		return "", nil, fmt.Errorf("unknown entry type %q", entry.Type)
+	}
 }

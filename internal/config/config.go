@@ -14,11 +14,14 @@ type Config struct {
 
 // ServerConfig describes the Minecraft server to install and run.
 type ServerConfig struct {
-	Type    string   `koanf:"type"`
-	Version string   `koanf:"version"`
-	Eula    bool     `koanf:"eula"`
-	Memory  string   `koanf:"memory"`
-	Args    []string `koanf:"args"`
+	Type    string `koanf:"type"`
+	Version string `koanf:"version"`
+	Eula    bool   `koanf:"eula"`
+	Memory  string `koanf:"memory"`
+	// JvmFlags are raw JVM flags placed before -jar. Like Memory, they only
+	// apply to java entries.
+	JvmFlags []string `koanf:"jvm_flags"`
+	Args     []string `koanf:"args"`
 }
 
 // ModSpec is a declarative description of a single mod to install.
