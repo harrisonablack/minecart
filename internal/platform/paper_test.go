@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/harrisonablack/minecart/internal/manifest"
 )
 
 // newPaperServer serves a builds list at the PaperMC builds path.
@@ -36,10 +38,11 @@ func TestResolvePaper(t *testing.T) {
 	}]`)
 
 	p := paper{baseURL: srv.URL}
-	art, err := p.resolve(context.Background(), "1.21.4")
+	res, err := p.resolve(context.Background(), "1.21.4")
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
+	art := res.Artifact
 
 	if art.Name != "paper" {
 		t.Errorf("Name = %q, want %q", art.Name, "paper")
@@ -47,14 +50,21 @@ func TestResolvePaper(t *testing.T) {
 	if art.URL != "https://fill-data.papermc.io/v1/objects/abc123/paper-1.21.4-232.jar" {
 		t.Errorf("URL = %q", art.URL)
 	}
-	if art.Filename != "server.jar" {
-		t.Errorf("Filename = %q, want %q", art.Filename, "server.jar")
+	if art.Filename != "paper-1.21.4-232.jar" {
+		t.Errorf("Filename = %q, want %q", art.Filename, "paper-1.21.4-232.jar")
 	}
 	if art.Size != 51437498 {
 		t.Errorf("Size = %d, want 51437498", art.Size)
 	}
 	if art.Hashes["sha256"] != "abc123" {
 		t.Errorf("Hashes[sha256] = %q, want %q", art.Hashes["sha256"], "abc123")
+	}
+	wantEntry := manifest.Entry{Type: "java", Point: "paper-1.21.4-232.jar"}
+	if res.Entry != wantEntry {
+		t.Errorf("Entry = %+v, want %+v", res.Entry, wantEntry)
+	}
+	if res.Identity != "paper-1.21.4-232" {
+		t.Errorf("Identity = %q, want %q", res.Identity, "paper-1.21.4-232")
 	}
 }
 
@@ -65,12 +75,15 @@ func TestResolvePaperPicksStable(t *testing.T) {
 	]`)
 
 	p := paper{baseURL: srv.URL}
-	art, err := p.resolve(context.Background(), "1.21.4")
+	res, err := p.resolve(context.Background(), "1.21.4")
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
-	if art.URL != "https://example.com/stable.jar" {
-		t.Errorf("URL = %q, want stable build URL", art.URL)
+	if res.Artifact.URL != "https://example.com/stable.jar" {
+		t.Errorf("URL = %q, want stable build URL", res.Artifact.URL)
+	}
+	if res.Identity != "paper-1.21.4-232" {
+		t.Errorf("Identity = %q, want %q", res.Identity, "paper-1.21.4-232")
 	}
 }
 

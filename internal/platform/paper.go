@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/harrisonablack/minecart/internal/artifact"
+	"github.com/harrisonablack/minecart/internal/manifest"
 )
 
 const paperBaseURL = "https://fill.papermc.io/v3"
@@ -21,8 +22,8 @@ type paper struct {
 }
 
 // resolve fetches the builds for version and returns the latest stable build's
-// server jar as an Artifact.
-func (p paper) resolve(ctx context.Context, version string) (artifact.Artifact, error) {
+// server jar.
+func (p paper) resolve(ctx context.Context, version string) (Resolved, error) {
 	client := p.client
 	if client == nil {
 		client = &http.Client{Timeout: 30 * time.Second}
@@ -36,25 +37,34 @@ func (p paper) resolve(ctx context.Context, version string) (artifact.Artifact, 
 
 	var builds []paperBuild
 	if err := getJSON(ctx, client, url, &builds); err != nil {
-		return artifact.Artifact{}, fmt.Errorf("paper: fetch builds: %w", err)
+		return Resolved{}, fmt.Errorf("paper: fetch builds: %w", err)
 	}
 
 	build, ok := latestStable(builds)
 	if !ok {
-		return artifact.Artifact{}, fmt.Errorf("paper: no stable build for version %q", version)
+		return Resolved{}, fmt.Errorf("paper: no stable build for version %q", version)
 	}
 
 	dl, ok := build.Downloads["server:default"]
 	if !ok {
-		return artifact.Artifact{}, fmt.Errorf("paper: no server:default download for build %d", build.ID)
+		return Resolved{}, fmt.Errorf("paper: no server:default download for build %d", build.ID)
 	}
 
-	return artifact.Artifact{
-		Name:     "paper",
-		URL:      dl.URL,
-		Filename: "server.jar",
-		Hashes:   map[string]string{"sha256": dl.Checksums.SHA256},
-		Size:     dl.Size,
+	filename, err := filenameFromURL(dl.URL)
+	if err != nil {
+		return Resolved{}, fmt.Errorf("paper: %w", err)
+	}
+
+	return Resolved{
+		Artifact: artifact.Artifact{
+			Name:     "paper",
+			URL:      dl.URL,
+			Filename: filename,
+			Hashes:   map[string]string{"sha256": dl.Checksums.SHA256},
+			Size:     dl.Size,
+		},
+		Entry:    manifest.Entry{Type: manifest.EntryJava, Point: filename},
+		Identity: fmt.Sprintf("paper-%s-%d", version, build.ID),
 	}, nil
 }
 

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/harrisonablack/minecart/internal/artifact"
+	"github.com/harrisonablack/minecart/internal/manifest"
 	"github.com/harrisonablack/minecart/internal/version"
 )
 
@@ -24,7 +25,7 @@ type vanilla struct {
 
 // resolve looks up version in the manifest, then fetches that version's
 // metadata to find the server jar download.
-func (v vanilla) resolve(ctx context.Context, version string) (artifact.Artifact, error) {
+func (v vanilla) resolve(ctx context.Context, version string) (Resolved, error) {
 	client := v.client
 	if client == nil {
 		client = &http.Client{Timeout: 30 * time.Second}
@@ -36,25 +37,34 @@ func (v vanilla) resolve(ctx context.Context, version string) (artifact.Artifact
 
 	var vm versionManifest
 	if err := getJSON(ctx, client, manifestURL, &vm); err != nil {
-		return artifact.Artifact{}, fmt.Errorf("vanilla: fetch manifest: %w", err)
+		return Resolved{}, fmt.Errorf("vanilla: fetch manifest: %w", err)
 	}
 
 	versionURL := vm.versionURL(version)
 	if versionURL == "" {
-		return artifact.Artifact{}, fmt.Errorf("vanilla: version %q not found", version)
+		return Resolved{}, fmt.Errorf("vanilla: version %q not found", version)
 	}
 
 	var vj versionJSON
 	if err := getJSON(ctx, client, versionURL, &vj); err != nil {
-		return artifact.Artifact{}, fmt.Errorf("vanilla: fetch version %q: %w", version, err)
+		return Resolved{}, fmt.Errorf("vanilla: fetch version %q: %w", version, err)
 	}
 
-	return artifact.Artifact{
-		Name:     "vanilla",
-		URL:      vj.Downloads.Server.URL,
-		Filename: "server.jar",
-		Hashes:   map[string]string{"sha1": vj.Downloads.Server.SHA1},
-		Size:     vj.Downloads.Server.Size,
+	filename, err := filenameFromURL(vj.Downloads.Server.URL)
+	if err != nil {
+		return Resolved{}, fmt.Errorf("vanilla: %w", err)
+	}
+
+	return Resolved{
+		Artifact: artifact.Artifact{
+			Name:     "vanilla",
+			URL:      vj.Downloads.Server.URL,
+			Filename: filename,
+			Hashes:   map[string]string{"sha1": vj.Downloads.Server.SHA1},
+			Size:     vj.Downloads.Server.Size,
+		},
+		Entry:    manifest.Entry{Type: manifest.EntryJava, Point: filename},
+		Identity: "vanilla-" + version,
 	}, nil
 }
 
