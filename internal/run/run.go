@@ -88,9 +88,16 @@ func Server(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
 		winch := make(chan os.Signal, 1)
 		signal.Notify(winch, syscall.SIGWINCH)
 		defer signal.Stop(winch)
+		stopResize := make(chan struct{})
+		defer close(stopResize)
 		go func() {
-			for range winch {
-				_ = pty.InheritSize(os.Stdin, ptmx)
+			for {
+				select {
+				case <-winch:
+					_ = pty.InheritSize(os.Stdin, ptmx)
+				case <-stopResize:
+					return
+				}
 			}
 		}()
 	} else {
