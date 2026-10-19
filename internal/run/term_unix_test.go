@@ -14,8 +14,8 @@ func TestMakeRawKeepsSignalsAndOutputProcessing(t *testing.T) {
 	if err != nil {
 		t.Skipf("open pty: %v", err)
 	}
-	defer ptmx.Close()
-	defer tty.Close()
+	defer func() { _ = ptmx.Close() }()
+	defer func() { _ = tty.Close() }()
 
 	fd := int(tty.Fd())
 	if !isTerminal(fd) {

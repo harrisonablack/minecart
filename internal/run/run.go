@@ -64,7 +64,7 @@ func Server(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
 	if err != nil {
 		return fmt.Errorf("start server: %w", err)
 	}
-	defer ptmx.Close()
+	defer func() { _ = ptmx.Close() }()
 
 	stdinFd := int(os.Stdin.Fd())
 	if isTerminal(stdinFd) {
