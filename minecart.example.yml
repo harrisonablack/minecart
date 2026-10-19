@@ -11,7 +11,7 @@ server:
   version: "26.2"
   # Accept the Minecraft EULA (required).
   eula: true
-  # Java heap size.
+  # Java heap size (passed as -Xmx).
   memory: "2G"
   # Extra arguments passed to the server.
   args: ["nogui"]
