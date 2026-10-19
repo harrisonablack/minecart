@@ -34,12 +34,12 @@ func (v vanilla) resolve(ctx context.Context, version string) (artifact.Artifact
 		manifestURL = vanillaManifestURL
 	}
 
-	var manifest versionManifest
-	if err := getJSON(ctx, client, manifestURL, &manifest); err != nil {
+	var vm versionManifest
+	if err := getJSON(ctx, client, manifestURL, &vm); err != nil {
 		return artifact.Artifact{}, fmt.Errorf("vanilla: fetch manifest: %w", err)
 	}
 
-	versionURL := manifest.versionURL(version)
+	versionURL := vm.versionURL(version)
 	if versionURL == "" {
 		return artifact.Artifact{}, fmt.Errorf("vanilla: version %q not found", version)
 	}
