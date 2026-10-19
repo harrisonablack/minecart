@@ -24,6 +24,19 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # ---- Runtime stage: minimal image with the requested Java version ----
 FROM eclipse-temurin:${JAVA_VERSION}-jre
 
+# Version baked into the image labels; set by the release workflow.
+ARG VERSION=dev
+
+# OCI image-spec annotations (https://github.com/opencontainers/image-spec).
+LABEL \
+  org.opencontainers.image.title="Minecart" \
+  org.opencontainers.image.description="Dockerised Minecraft server tooling" \
+  org.opencontainers.image.source="https://github.com/harrisonablack/minecart" \
+  org.opencontainers.image.url="https://github.com/harrisonablack/minecart" \
+  org.opencontainers.image.documentation="https://minecart.dev" \
+  org.opencontainers.image.licenses="Apache-2.0" \
+  org.opencontainers.image.version="${VERSION}"
+
 # Run as an unprivileged user.
 RUN useradd --system --uid 10001 --create-home minecart
 
