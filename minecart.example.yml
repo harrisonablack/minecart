@@ -8,7 +8,7 @@ server:
   # Server type: vanilla | paper | fabric | forge | neoforge
   type: vanilla
   # Minecraft version. 1.21.4 requires Java 21.
-  version: "1.21.4"
+  version: "26.2"
   # Accept the Minecraft EULA (required).
   eula: true
   # Java heap size.

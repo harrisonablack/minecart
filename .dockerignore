@@ -1,0 +1,10 @@
+.git
+.github
+.cache
+.venv
+bin/
+minecart
+minecart.yml
+server/
+site/
+docs/
