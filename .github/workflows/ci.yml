@@ -5,11 +5,23 @@ on:
     branches:
       - main
   pull_request:
+    # "edited" re-runs the title check when a PR title is changed.
+    types: [opened, edited, synchronize, reopened]
 
 permissions:
   contents: read
 
 jobs:
+  pr-title:
+    name: PR Title
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-26.04
+    permissions:
+      pull-requests: read
+    steps:
+      - uses: amannn/action-semantic-pull-request@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   format:
     name: Format
     runs-on: ubuntu-26.04
