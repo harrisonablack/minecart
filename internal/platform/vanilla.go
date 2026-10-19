@@ -3,6 +3,7 @@ package platform
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -24,7 +25,8 @@ type vanilla struct {
 }
 
 // resolve looks up version in the manifest, then fetches that version's
-// metadata to find the server jar download.
+// metadata to find the server jar download. LatestVersion resolves to the
+// manifest's latest release.
 func (v vanilla) resolve(ctx context.Context, version string) (Resolved, error) {
 	client := v.client
 	if client == nil {
@@ -38,6 +40,13 @@ func (v vanilla) resolve(ctx context.Context, version string) (Resolved, error) 
 	var vm versionManifest
 	if err := getJSON(ctx, client, manifestURL, &vm); err != nil {
 		return Resolved{}, fmt.Errorf("vanilla: fetch manifest: %w", err)
+	}
+
+	if version == LatestVersion {
+		version = vm.Latest.Release
+		if version == "" {
+			return Resolved{}, errors.New("vanilla: no latest release in manifest")
+		}
 	}
 
 	versionURL := vm.versionURL(version)
@@ -70,6 +79,10 @@ func (v vanilla) resolve(ctx context.Context, version string) (Resolved, error) 
 
 // versionManifest is the subset of Mojang's version manifest we need.
 type versionManifest struct {
+	Latest struct {
+		Release  string `json:"release"`
+		Snapshot string `json:"snapshot"`
+	} `json:"latest"`
 	Versions []struct {
 		ID  string `json:"id"`
 		URL string `json:"url"`
