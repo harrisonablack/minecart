@@ -19,14 +19,21 @@ func writeResponse(t *testing.T, w http.ResponseWriter, body string) {
 }
 
 // newVanillaServer serves a manifest at /manifest and a version at /version,
-// with the manifest's version URL pointing back at the test server.
+// with the manifest's version URL pointing back at the test server. The
+// manifest's latest release is 26.3.
 func newVanillaServer(t *testing.T, versionJSON string) *httptest.Server {
 	t.Helper()
 	var srv *httptest.Server
 	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/manifest":
-			writeResponse(t, w, `{"versions": [{"id": "26.3", "url": "`+srv.URL+`/version"}]}`)
+			writeResponse(t, w, `{
+				"latest": {"release": "26.3", "snapshot": "26.4-snapshot-1"},
+				"versions": [
+					{"id": "26.4-snapshot-1", "url": "`+srv.URL+`/snapshot"},
+					{"id": "26.3", "url": "`+srv.URL+`/version"}
+				]
+			}`)
 		case "/version":
 			writeResponse(t, w, versionJSON)
 		default:
@@ -83,6 +90,40 @@ func TestResolveVanillaVersionNotFound(t *testing.T) {
 	v := vanilla{manifestURL: srv.URL + "/manifest"}
 	if _, err := v.resolve(context.Background(), "1.0.0"); err == nil {
 		t.Fatal("resolve: expected error for unknown version, got nil")
+	}
+}
+
+func TestResolveVanillaLatest(t *testing.T) {
+	srv := newVanillaServer(t, `{
+		"downloads": {"server": {
+			"sha1": "abc123",
+			"size": 62294556,
+			"url": "https://piston-data.mojang.com/v1/objects/abc123/server.jar"
+		}}
+	}`)
+
+	v := vanilla{manifestURL: srv.URL + "/manifest"}
+	res, err := v.resolve(context.Background(), LatestVersion)
+	if err != nil {
+		t.Fatalf("resolve: %v", err)
+	}
+	if res.Artifact.URL != "https://piston-data.mojang.com/v1/objects/abc123/server.jar" {
+		t.Errorf("URL = %q", res.Artifact.URL)
+	}
+	if res.Identity != "vanilla-26.3" {
+		t.Errorf("Identity = %q, want %q", res.Identity, "vanilla-26.3")
+	}
+}
+
+func TestResolveVanillaLatestMissing(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		writeResponse(t, w, `{"latest": {"release": ""}, "versions": []}`)
+	}))
+	t.Cleanup(srv.Close)
+
+	v := vanilla{manifestURL: srv.URL}
+	if _, err := v.resolve(context.Background(), LatestVersion); err == nil {
+		t.Fatal("resolve: expected error for missing latest release, got nil")
 	}
 }
 

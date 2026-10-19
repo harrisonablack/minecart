@@ -23,6 +23,108 @@ func newPaperServer(t *testing.T, buildsJSON string) *httptest.Server {
 	return srv
 }
 
+// newPaperVersionsServer serves versionsJSON at the PaperMC versions path, and
+// each entry of builds (version -> builds list) at that version's builds path.
+func newPaperVersionsServer(t *testing.T, versionsJSON string, builds map[string]string) *httptest.Server {
+	t.Helper()
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /projects/paper/versions", func(w http.ResponseWriter, r *http.Request) {
+		writeResponse(t, w, versionsJSON)
+	})
+	mux.HandleFunc("GET /projects/paper/versions/{version}/builds", func(w http.ResponseWriter, r *http.Request) {
+		body, ok := builds[r.PathValue("version")]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		writeResponse(t, w, body)
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+const (
+	paperStableBuildsJSON = `[
+		{"id": 206, "channel": "STABLE", "downloads": {"server:default": {"name": "paper-26.3-206.jar", "checksums": {"sha256": "abc123"}, "size": 1, "url": "https://example.com/paper-26.3-206.jar"}}}
+	]`
+	paperAlphaBuildsJSON = `[
+		{"id": 1, "channel": "ALPHA", "downloads": {"server:default": {"name": "alpha.jar", "checksums": {"sha256": "alpha"}, "size": 1, "url": "https://example.com/alpha.jar"}}}
+	]`
+)
+
+func TestResolvePaperLatest(t *testing.T) {
+	srv := newPaperVersionsServer(t,
+		`{"versions": [{"version": {"id": "26.3"}}, {"version": {"id": "26.2"}}]}`,
+		map[string]string{"26.3": paperStableBuildsJSON},
+	)
+
+	p := paper{baseURL: srv.URL}
+	res, err := p.resolve(context.Background(), LatestVersion)
+	if err != nil {
+		t.Fatalf("resolve: %v", err)
+	}
+	if res.Artifact.URL != "https://example.com/paper-26.3-206.jar" {
+		t.Errorf("URL = %q", res.Artifact.URL)
+	}
+	if res.Identity != "paper-26.3-206" {
+		t.Errorf("Identity = %q, want %q", res.Identity, "paper-26.3-206")
+	}
+}
+
+func TestResolvePaperLatestSkipsUnstableVersions(t *testing.T) {
+	srv := newPaperVersionsServer(t,
+		`{"versions": [{"version": {"id": "26.4"}}, {"version": {"id": "26.4-rc-1"}}, {"version": {"id": "26.3"}}]}`,
+		map[string]string{
+			"26.4":      paperAlphaBuildsJSON,
+			"26.4-rc-1": paperAlphaBuildsJSON,
+			"26.3":      paperStableBuildsJSON,
+		},
+	)
+
+	p := paper{baseURL: srv.URL}
+	res, err := p.resolve(context.Background(), LatestVersion)
+	if err != nil {
+		t.Fatalf("resolve: %v", err)
+	}
+	if res.Identity != "paper-26.3-206" {
+		t.Errorf("Identity = %q, want %q", res.Identity, "paper-26.3-206")
+	}
+}
+
+func TestResolvePaperLatestNoVersions(t *testing.T) {
+	srv := newPaperVersionsServer(t, `{"versions": []}`, nil)
+
+	p := paper{baseURL: srv.URL}
+	if _, err := p.resolve(context.Background(), LatestVersion); err == nil {
+		t.Fatal("resolve: expected error for no versions, got nil")
+	}
+}
+
+func TestResolvePaperLatestNoStable(t *testing.T) {
+	srv := newPaperVersionsServer(t,
+		`{"versions": [{"version": {"id": "26.4"}}]}`,
+		map[string]string{"26.4": paperAlphaBuildsJSON},
+	)
+
+	p := paper{baseURL: srv.URL}
+	if _, err := p.resolve(context.Background(), LatestVersion); err == nil {
+		t.Fatal("resolve: expected error for no stable build, got nil")
+	}
+}
+
+func TestResolvePaperLatestBuildsError(t *testing.T) {
+	srv := newPaperVersionsServer(t,
+		`{"versions": [{"version": {"id": "26.4"}}, {"version": {"id": "26.3"}}]}`,
+		map[string]string{"26.3": paperStableBuildsJSON},
+	)
+
+	p := paper{baseURL: srv.URL}
+	if _, err := p.resolve(context.Background(), LatestVersion); err == nil {
+		t.Fatal("resolve: expected error when fetching builds fails, got nil")
+	}
+}
+
 func TestResolvePaper(t *testing.T) {
 	srv := newPaperServer(t, `[{
 		"id": 232,

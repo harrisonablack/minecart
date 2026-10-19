@@ -13,6 +13,10 @@ import (
 	"github.com/harrisonablack/minecart/internal/manifest"
 )
 
+// LatestVersion is the sentinel value for server.version that resolves to the
+// platform's most recent release.
+const LatestVersion = "latest"
+
 // Resolved is a resolved server: what to download, how to launch it, and a
 // stable identity used to detect updates.
 type Resolved struct {
