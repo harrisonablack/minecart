@@ -22,12 +22,27 @@ func TestMakeRawKeepsSignalsAndOutputProcessing(t *testing.T) {
 		t.Fatal("pty slave not detected as terminal")
 	}
 
+	// A fresh pty already has VMIN=1/VTIME=0, the values makeRaw sets, so
+	// seed distinct values to prove restore puts them back.
+	seed, err := unix.IoctlGetTermios(fd, ioctlReadTermios)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seed.Cc[unix.VMIN] = 3
+	seed.Cc[unix.VTIME] = 7
+	if err := unix.IoctlSetTermios(fd, ioctlWriteTermios, seed); err != nil {
+		t.Fatal(err)
+	}
+
 	before, err := unix.IoctlGetTermios(fd, ioctlReadTermios)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if before.Lflag&unix.ICANON == 0 || before.Lflag&unix.ECHO == 0 {
 		t.Fatal("expected fresh pty to start in canonical echo mode")
+	}
+	if before.Cc[unix.VMIN] != 3 || before.Cc[unix.VTIME] != 7 {
+		t.Fatalf("seed VMIN/VTIME = %d/%d, want 3/7", before.Cc[unix.VMIN], before.Cc[unix.VTIME])
 	}
 
 	state, err := makeRaw(fd)
@@ -67,7 +82,7 @@ func TestMakeRawKeepsSignalsAndOutputProcessing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if after.Lflag != before.Lflag || after.Iflag != before.Iflag || after.Oflag != before.Oflag {
-		t.Errorf("restore did not return terminal to original state")
+	if *after != *before {
+		t.Errorf("restore did not return terminal to original state:\n got %+v\nwant %+v", *after, *before)
 	}
 }
