@@ -34,11 +34,14 @@ func Detect(ctx context.Context) (Info, error) {
 
 // versionRe matches the java.version property in
 // `java -XshowSettings:properties` output, e.g. `java.version = 21.0.11`.
-var versionRe = regexp.MustCompile(`java\.version\s*=\s*(.+)`)
+// It is anchored to a whole property line so echoed options such as
+// `-Dapp.java.version=...` are not mistaken for the property.
+var versionRe = regexp.MustCompile(`(?m)^\s*java\.version\s*=\s*(.+)$`)
 
 // vendorRe matches the java.vm.vendor property, e.g.
-// `java.vm.vendor = Eclipse Adoptium`.
-var vendorRe = regexp.MustCompile(`java\.vm\.vendor\s*=\s*(.+)`)
+// `java.vm.vendor = Eclipse Adoptium`. It is anchored to a whole property
+// line for the same reason as versionRe.
+var vendorRe = regexp.MustCompile(`(?m)^\s*java\.vm\.vendor\s*=\s*(.+)$`)
 
 // parse extracts the version and vendor from java -XshowSettings:properties
 // output.

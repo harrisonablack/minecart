@@ -42,6 +42,15 @@ func TestParse(t *testing.T) {
 			want: Info{Version: "21.0.2", Vendor: "Oracle Corporation"},
 		},
 		{
+			name: "echoed java tool options",
+			output: `Picked up JAVA_TOOL_OPTIONS: -Dapp.java.version=legacy -Xmx2G
+Property settings:
+    java.version = 21.0.11
+    java.vm.vendor = Eclipse Adoptium
+`,
+			want: Info{Version: "21.0.11", Vendor: "Eclipse Adoptium"},
+		},
+		{
 			name: "missing version",
 			output: `Property settings:
     java.vm.vendor = Eclipse Adoptium
