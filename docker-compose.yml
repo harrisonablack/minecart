@@ -3,7 +3,7 @@ services:
     build:
       context: .
       args:
-        JAVA_VERSION: "25"
+        JAVA_VERSION: "27"
     image: minecart
     ports:
       - "25565:25565"

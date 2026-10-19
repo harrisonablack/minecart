@@ -1,7 +1,10 @@
-ARG JAVA_VERSION=25
+ARG JAVA_VERSION=27
 
 # ---- Build stage: compile the minecart binary ----
 FROM golang:1.27-alpine AS build
+
+# Version baked into the binary; set by the release workflow.
+ARG VERSION=dev
 
 WORKDIR /src
 
@@ -14,7 +17,9 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 COPY . .
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/minecart ./cmd/minecart
+    CGO_ENABLED=0 go build -trimpath \
+      -ldflags="-s -w -X github.com/harrisonablack/minecart/internal/version.Version=${VERSION}" \
+      -o /out/minecart ./cmd/minecart
 
 # ---- Runtime stage: minimal image with the requested Java version ----
 FROM eclipse-temurin:${JAVA_VERSION}-jre
