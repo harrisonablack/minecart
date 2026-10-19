@@ -11,45 +11,46 @@ import (
 
 // Info describes the detected Java runtime.
 type Info struct {
-	// Version is the runtime version, e.g. "21.0.2".
+	// Version is the runtime version, e.g. "21.0.11".
 	Version string
-	// Vendor is the distribution vendor, e.g. "Temurin", "Corretto", "Zulu",
-	// or "Oracle". It is empty when the vendor cannot be determined.
+	// Vendor is the VM vendor, e.g. "Eclipse Adoptium", "Amazon.com Inc.",
+	// "Azul Systems, Inc.", or "Oracle Corporation". It is empty when the
+	// vendor cannot be determined.
 	Vendor string
 }
 
 // Detect returns the version and vendor of the java binary on PATH.
 //
-// Java writes its version information to stderr, so the combined output of
-// `java -version` is captured and parsed.
+// Java writes its settings to stderr, so the combined output of
+// `java -XshowSettings:properties -version` is captured and parsed. If java
+// is not installed or the command exits non-zero, Detect returns an error.
 func Detect(ctx context.Context) (Info, error) {
-	out, err := exec.CommandContext(ctx, "java", "-version").CombinedOutput()
+	out, err := exec.CommandContext(ctx, "java", "-XshowSettings:properties", "-version").CombinedOutput()
 	if err != nil {
-		return Info{}, fmt.Errorf("run java -version: %w", err)
+		return Info{}, fmt.Errorf("run java -XshowSettings:properties -version: %w", err)
 	}
 	return parse(string(out))
 }
 
-// versionRe matches the version string in `java -version` output, e.g.
-// `openjdk version "21.0.2"` or `java version "21.0.2"`.
-var versionRe = regexp.MustCompile(`version "([^"]+)"`)
+// versionRe matches the java.version property in
+// `java -XshowSettings:properties` output, e.g. `java.version = 21.0.11`.
+var versionRe = regexp.MustCompile(`java\.version\s*=\s*(.+)`)
 
-// vendorRe matches the distribution vendor in the runtime line, e.g.
-// `OpenJDK Runtime Environment Temurin-21.0.2+13`.
-var vendorRe = regexp.MustCompile(`Runtime Environment ([A-Za-z]+)`)
+// vendorRe matches the java.vm.vendor property, e.g.
+// `java.vm.vendor = Eclipse Adoptium`.
+var vendorRe = regexp.MustCompile(`java\.vm\.vendor\s*=\s*(.+)`)
 
-// parse extracts the version and vendor from java -version output.
+// parse extracts the version and vendor from java -XshowSettings:properties
+// output.
 func parse(output string) (Info, error) {
 	m := versionRe.FindStringSubmatch(output)
 	if m == nil {
 		return Info{}, fmt.Errorf("parse java version from output: %q", strings.TrimSpace(output))
 	}
-	info := Info{Version: m[1]}
+	info := Info{Version: strings.TrimSpace(m[1])}
 
 	if v := vendorRe.FindStringSubmatch(output); v != nil {
-		info.Vendor = v[1]
-	} else if strings.Contains(output, "Java(TM) SE Runtime Environment") {
-		info.Vendor = "Oracle"
+		info.Vendor = strings.TrimSpace(v[1])
 	}
 	return info, nil
 }
