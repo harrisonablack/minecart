@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/harrisonablack/minecart/internal/config"
+	"github.com/harrisonablack/minecart/internal/manifest"
 )
 
 // writeResponse writes body to w, failing the test on error.
@@ -46,10 +47,11 @@ func TestResolveVanilla(t *testing.T) {
 	}`)
 
 	v := vanilla{manifestURL: srv.URL + "/manifest"}
-	art, err := v.resolve(context.Background(), "26.3")
+	res, err := v.resolve(context.Background(), "26.3")
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
+	art := res.Artifact
 
 	if art.Name != "vanilla" {
 		t.Errorf("Name = %q, want %q", art.Name, "vanilla")
@@ -66,6 +68,13 @@ func TestResolveVanilla(t *testing.T) {
 	if art.Hashes["sha1"] != "abc123" {
 		t.Errorf("Hashes[sha1] = %q, want %q", art.Hashes["sha1"], "abc123")
 	}
+	wantEntry := manifest.Entry{Type: "java", Point: "server.jar"}
+	if res.Entry != wantEntry {
+		t.Errorf("Entry = %+v, want %+v", res.Entry, wantEntry)
+	}
+	if res.Identity != "vanilla-26.3" {
+		t.Errorf("Identity = %q, want %q", res.Identity, "vanilla-26.3")
+	}
 }
 
 func TestResolveVanillaVersionNotFound(t *testing.T) {
@@ -81,5 +90,52 @@ func TestResolveUnknownType(t *testing.T) {
 	_, err := Resolve(context.Background(), config.ServerConfig{Type: "fabric", Version: "1.21.4"})
 	if err == nil {
 		t.Fatal("Resolve: expected error for unknown type, got nil")
+	}
+}
+
+func TestFilenameFromURL(t *testing.T) {
+	tests := []struct {
+		name    string
+		url     string
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "vanilla",
+			url:  "https://piston-data.mojang.com/v1/objects/abc123/server.jar",
+			want: "server.jar",
+		},
+		{
+			name: "paper",
+			url:  "https://fill-data.papermc.io/v1/objects/abc123/paper-1.21.4-232.jar",
+			want: "paper-1.21.4-232.jar",
+		},
+		{
+			name: "strips query and fragment",
+			url:  "https://example.com/files/server.jar?token=x#frag",
+			want: "server.jar",
+		},
+		{
+			name:    "no path",
+			url:     "https://example.com",
+			wantErr: true,
+		},
+		{
+			name:    "root path",
+			url:     "https://example.com/",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := filenameFromURL(tt.url)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("filenameFromURL() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if got != tt.want {
+				t.Errorf("filenameFromURL() = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }
