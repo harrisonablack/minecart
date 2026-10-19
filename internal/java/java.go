@@ -14,8 +14,7 @@ type Info struct {
 	// Version is the runtime version, e.g. "21.0.11".
 	Version string
 	// Vendor is the VM vendor, e.g. "Eclipse Adoptium", "Amazon.com Inc.",
-	// "Azul Systems, Inc.", or "Oracle Corporation". It is empty when the
-	// vendor cannot be determined.
+	// "Azul Systems, Inc.", or "Oracle Corporation".
 	Vendor string
 }
 
