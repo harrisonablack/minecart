@@ -40,7 +40,7 @@ func Run(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
 
 // installServer downloads the resolved server into dir unless the manifest
 // already records the same identity and the entry file is intact. On change it
-// removes the previous entry point and rewrites the manifest.
+// rewrites the manifest and then removes the previous entry point.
 func installServer(ctx context.Context, logger *slog.Logger, serverType string, resolved platform.Resolved, dir string) error {
 	path := manifest.Path(dir)
 	existing, err := manifest.Read(path)
@@ -62,10 +62,6 @@ func installServer(ctx context.Context, logger *slog.Logger, serverType string, 
 		return err
 	}
 
-	if old := existing.Entry.Point; old != "" && old != resolved.Entry.Point {
-		removeStale(logger, dir, old)
-	}
-
 	m := manifest.Manifest{
 		Type:        serverType,
 		Identity:    resolved.Identity,
@@ -77,6 +73,12 @@ func installServer(ctx context.Context, logger *slog.Logger, serverType string, 
 		return err
 	}
 	logger.Info("wrote manifest", "file", path, "identity", m.Identity)
+
+	// Only remove the previous entry once the manifest no longer references
+	// it, so a failed write leaves the old install launchable.
+	if old := existing.Entry.Point; old != "" && old != resolved.Entry.Point {
+		removeStale(logger, dir, old)
+	}
 
 	return nil
 }

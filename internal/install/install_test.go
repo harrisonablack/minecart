@@ -406,3 +406,68 @@ func TestInstallServerRedownloadsCorruptFile(t *testing.T) {
 		t.Errorf("server hit %d times, want 2 (re-download corrupt file)", got)
 	}
 }
+
+func TestInstallServerKeepsOldJarOnManifestWriteFailure(t *testing.T) {
+	builds := map[string][]byte{
+		"/paper-1.21.4-52.jar": []byte("build 52"),
+		"/paper-1.21.4-53.jar": []byte("build 53"),
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, ok := builds[r.URL.Path]
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		writeResponse(t, w, body)
+	}))
+	t.Cleanup(srv.Close)
+
+	dir := t.TempDir()
+	logger := discardLogger()
+	ctx := context.Background()
+
+	build52 := paperResolved(srv.URL, 52, builds["/paper-1.21.4-52.jar"])
+	build53 := paperResolved(srv.URL, 53, builds["/paper-1.21.4-53.jar"])
+
+	if err := installServer(ctx, logger, "paper", build52, dir); err != nil {
+		t.Fatalf("install build 52: %v", err)
+	}
+
+	// A directory at the temporary path makes manifest.Write fail.
+	blocker := manifest.Path(dir) + ".tmp"
+	if err := os.Mkdir(blocker, 0o755); err != nil {
+		t.Fatalf("create blocker: %v", err)
+	}
+
+	if err := installServer(ctx, logger, "paper", build53, dir); err == nil {
+		t.Fatal("install build 53: expected error from manifest write, got nil")
+	}
+
+	oldJar := filepath.Join(dir, "paper-1.21.4-52.jar")
+	if _, err := os.Stat(oldJar); err != nil {
+		t.Errorf("old jar should survive failed manifest write, stat err = %v", err)
+	}
+	m, err := manifest.Read(manifest.Path(dir))
+	if err != nil {
+		t.Fatalf("read manifest: %v", err)
+	}
+	if m.Identity != build52.Identity {
+		t.Errorf("manifest Identity = %q, want %q", m.Identity, build52.Identity)
+	}
+
+	if err := os.Remove(blocker); err != nil {
+		t.Fatalf("remove blocker: %v", err)
+	}
+	if err := installServer(ctx, logger, "paper", build53, dir); err != nil {
+		t.Fatalf("retry install build 53: %v", err)
+	}
+	if m, err = manifest.Read(manifest.Path(dir)); err != nil {
+		t.Fatalf("read manifest: %v", err)
+	}
+	if m.Identity != build53.Identity {
+		t.Errorf("manifest Identity = %q, want %q", m.Identity, build53.Identity)
+	}
+	if _, err := os.Stat(oldJar); !os.IsNotExist(err) {
+		t.Errorf("old jar should be removed after successful update, stat err = %v", err)
+	}
+}
