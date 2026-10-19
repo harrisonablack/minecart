@@ -55,6 +55,21 @@ func Server(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
 
 	logger.Info("starting server", "entry", m.Entry.Type, "command", name+" "+strings.Join(args, " "))
 
+	// The server's console (e.g. Paper's JLine) puts its pty into raw mode
+	// and handles echo and line editing itself. Our terminal must stop
+	// doing the same, or every keystroke is echoed twice and escape
+	// sequences for arrow keys and pastes show up as text. Do this before
+	// launching the server so a failure here leaves no child to clean up.
+	stdinFd := int(os.Stdin.Fd())
+	interactive := isTerminal(stdinFd)
+	if interactive {
+		state, err := makeRaw(stdinFd)
+		if err != nil {
+			return fmt.Errorf("configure terminal: %w", err)
+		}
+		defer func() { _ = state.restore(stdinFd) }()
+	}
+
 	// Run the server in its own session with a pseudo-terminal so that
 	// terminal-generated signals (ctrl-c) reach only minecart, not the
 	// server. This keeps shutdown behavior consistent across servers that
@@ -66,18 +81,7 @@ func Server(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
 	}
 	defer func() { _ = ptmx.Close() }()
 
-	stdinFd := int(os.Stdin.Fd())
-	if isTerminal(stdinFd) {
-		// The server's console (e.g. Paper's JLine) puts its pty into raw
-		// mode and handles echo and line editing itself. Our terminal must
-		// stop doing the same, or every keystroke is echoed twice and
-		// escape sequences for arrow keys and pastes show up as text.
-		state, err := makeRaw(stdinFd)
-		if err != nil {
-			return fmt.Errorf("configure terminal: %w", err)
-		}
-		defer func() { _ = state.restore(stdinFd) }()
-
+	if interactive {
 		// Match the child's terminal size to the real terminal up front. A
 		// pty starts at 0x0, which makes console programs fall back to a
 		// "dumb" terminal and print "..." prompts.
