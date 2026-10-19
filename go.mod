@@ -3,6 +3,7 @@ module github.com/harrisonablack/minecart
 go 1.27.2
 
 require (
+	github.com/creack/pty v1.1.24
 	github.com/knadh/koanf/parsers/json v1.0.1
 	github.com/knadh/koanf/parsers/yaml v1.1.1
 	github.com/knadh/koanf/providers/confmap v1.0.1
