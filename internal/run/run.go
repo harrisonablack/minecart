@@ -66,25 +66,46 @@ func Server(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
 	}
 	defer ptmx.Close()
 
-	// Match the child's terminal size to the real terminal up front. A pty
-	// starts at 0x0, which makes console programs (e.g. Paper's JLine) fall
-	// back to a "dumb" terminal and print "..." prompts.
-	_ = pty.InheritSize(os.Stdin, ptmx)
+	stdinFd := int(os.Stdin.Fd())
+	if isTerminal(stdinFd) {
+		// The server's console (e.g. Paper's JLine) puts its pty into raw
+		// mode and handles echo and line editing itself. Our terminal must
+		// stop doing the same, or every keystroke is echoed twice and
+		// escape sequences for arrow keys and pastes show up as text.
+		state, err := makeRaw(stdinFd)
+		if err != nil {
+			return fmt.Errorf("configure terminal: %w", err)
+		}
+		defer func() { _ = state.restore(stdinFd) }()
+
+		// Match the child's terminal size to the real terminal up front. A
+		// pty starts at 0x0, which makes console programs fall back to a
+		// "dumb" terminal and print "..." prompts.
+		_ = pty.InheritSize(os.Stdin, ptmx)
+
+		// Keep the child's terminal size in sync with the real terminal so
+		// console output stays correct on resize.
+		winch := make(chan os.Signal, 1)
+		signal.Notify(winch, syscall.SIGWINCH)
+		defer signal.Stop(winch)
+		go func() {
+			for range winch {
+				_ = pty.InheritSize(os.Stdin, ptmx)
+			}
+		}()
+	} else {
+		_ = pty.Setsize(ptmx, &pty.Winsize{Rows: 24, Cols: 80})
+	}
 
 	// Relay the server's output to our stdout and our stdin to the server.
-	go func() { _, _ = io.Copy(os.Stdout, ptmx) }()
-	go func() { _, _ = io.Copy(ptmx, os.Stdin) }()
-
-	// Keep the child's terminal size in sync with the real terminal so
-	// console output (e.g. Paper's) stays correct on resize.
-	winch := make(chan os.Signal, 1)
-	signal.Notify(winch, syscall.SIGWINCH)
-	defer signal.Stop(winch)
+	// The output relay ends once the child exits and closes its side of the
+	// pty; waiting on it ensures the server's final lines are not dropped.
+	outputDone := make(chan struct{})
 	go func() {
-		for range winch {
-			_ = pty.InheritSize(os.Stdin, ptmx)
-		}
+		defer close(outputDone)
+		_, _ = io.Copy(os.Stdout, ptmx)
 	}()
+	go func() { _, _ = io.Copy(ptmx, os.Stdin) }()
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
@@ -96,9 +117,9 @@ func Server(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
 	for {
 		select {
 		case sig := <-sigCh:
-			// Translate any stop signal to SIGTERM so shutdown is uniform
-			// across server types: vanilla ignores SIGINT when not attached
-			// to a terminal, and the child now always sits behind a pty.
+			// Only minecart receives terminal signals now, so always send
+			// the server SIGTERM: it triggers a graceful stop on every
+			// server type, whereas vanilla ignores SIGINT.
 			logger.Info("forwarding signal to server", "signal", sig.String())
 			if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
 				logger.Warn("failed to forward signal", "signal", sig.String(), "error", err)
@@ -106,8 +127,11 @@ func Server(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
 		case <-ctx.Done():
 			logger.Info("stopping server")
 			_ = cmd.Process.Signal(syscall.SIGTERM)
-			return exitError(<-done)
+			err := <-done
+			<-outputDone
+			return exitError(err)
 		case err := <-done:
+			<-outputDone
 			return exitError(err)
 		}
 	}
