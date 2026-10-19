@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
+        id: checkout
         with:
           ref: main
           fetch-depth: 0
@@ -61,4 +62,7 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.v-version }}
           name: ${{ steps.version.outputs.version }}
+          # Pin the tag to the commit that was built, in case main advanced
+          # during the build.
+          target_commitish: ${{ steps.checkout.outputs.commit }}
           generate_release_notes: true
