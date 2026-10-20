@@ -1,6 +1,16 @@
+# Go build output
 /bin/
 /minecart
+
+# Local config (the real one — commit minecart.example.yml instead)
 /minecart.yml
+
+# Server data directory
 /server/
-/site/
-.venv/
+
+# Node
+node_modules/
+
+# Vitepress build output and cache
+docs/.vitepress/dist/
+docs/.vitepress/cache/

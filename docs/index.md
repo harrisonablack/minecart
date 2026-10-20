@@ -1,3 +1,1 @@
-# minecart
-
-Hello world! Documentation coming soon.
+# Hello, world

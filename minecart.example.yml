@@ -5,10 +5,10 @@
 directory: server
 
 server:
-  # Server type: vanilla | paper | fabric | forge | neoforge
+  # Server type: vanilla | paper
   type: vanilla
-  # Minecraft version, or "latest" for the newest release. 1.21.4 requires Java 21.
-  version: "26.2"
+  # Minecraft version, or "latest" for the newest release.
+  version: latest
   # Accept the Minecraft EULA (required).
   eula: true
   # Java heap size (passed as -Xmx).
