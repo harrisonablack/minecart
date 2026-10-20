@@ -1,4 +1,4 @@
-# Minecart - Dockerised Minecraft server tooling
+# Minecart - Dockerised Minecraft Server
 
 ![](https://skillicons.dev/icons?i=golang,docker,git,markdown)
 
