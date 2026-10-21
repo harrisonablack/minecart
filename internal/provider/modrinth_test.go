@@ -176,6 +176,7 @@ func TestModrinthResolveLatest(t *testing.T) {
 				"version_number": "5.3.0",
 				"version_type": "release",
 				"game_versions": ["1.21.4"],
+				"loaders": ["paper"],
 				"date_published": "2024-01-01T00:00:00Z",
 				"files": [{"url": "https://cdn.example.com/lp-5.3.0.jar", "filename": "lp-5.3.0.jar", "primary": true, "size": 200}]
 			},
@@ -184,6 +185,7 @@ func TestModrinthResolveLatest(t *testing.T) {
 				"version_number": "5.2.0",
 				"version_type": "release",
 				"game_versions": ["1.21.4"],
+				"loaders": ["paper"],
 				"date_published": "2024-02-01T00:00:00Z",
 				"files": [{"url": "https://cdn.example.com/lp-5.2.0.jar", "filename": "lp-5.2.0.jar", "primary": true, "size": 100}]
 			}
@@ -212,6 +214,7 @@ func TestModrinthResolveLatestFiltersGameVersion(t *testing.T) {
 				"version_number": "5.3.0",
 				"version_type": "release",
 				"game_versions": ["1.20.4"],
+				"loaders": ["paper"],
 				"date_published": "2024-02-01T00:00:00Z",
 				"files": [{"url": "https://cdn.example.com/lp-5.3.0.jar", "filename": "lp-5.3.0.jar", "primary": true, "size": 200}]
 			},
@@ -220,6 +223,7 @@ func TestModrinthResolveLatestFiltersGameVersion(t *testing.T) {
 				"version_number": "5.2.0",
 				"version_type": "release",
 				"game_versions": ["1.21.4"],
+				"loaders": ["paper"],
 				"date_published": "2024-01-01T00:00:00Z",
 				"files": [{"url": "https://cdn.example.com/lp-5.2.0.jar", "filename": "lp-5.2.0.jar", "primary": true, "size": 100}]
 			}
@@ -236,11 +240,46 @@ func TestModrinthResolveLatestFiltersGameVersion(t *testing.T) {
 	}
 }
 
+func TestModrinthResolveLatestFiltersLoader(t *testing.T) {
+	srv := newModrinthServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		writeResponse(t, w, `[
+			{
+				"id": "v1",
+				"version_number": "5.3.0",
+				"version_type": "release",
+				"game_versions": ["1.21.4"],
+				"loaders": ["fabric"],
+				"date_published": "2024-02-01T00:00:00Z",
+				"files": [{"url": "https://cdn.example.com/lp-5.3.0.jar", "filename": "lp-5.3.0.jar", "primary": true, "size": 200}]
+			},
+			{
+				"id": "v2",
+				"version_number": "5.2.0",
+				"version_type": "release",
+				"game_versions": ["1.21.4"],
+				"loaders": ["paper"],
+				"date_published": "2024-01-01T00:00:00Z",
+				"files": [{"url": "https://cdn.example.com/lp-5.2.0.jar", "filename": "lp-5.2.0.jar", "primary": true, "size": 100}]
+			}
+		]`)
+	})
+
+	m := Modrinth{baseURL: srv.URL}
+	art, err := m.Resolve(context.Background(), config.ResourceSpec{Name: "luckperms", Provider: "modrinth"}, "1.21.4")
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+	if art.Version != "5.2.0" {
+		t.Errorf("Version = %q, want %q (only paper loader)", art.Version, "5.2.0")
+	}
+}
+
 func TestModrinthResolveLatestChannel(t *testing.T) {
 	versions := `[
-		{"id": "r", "version_number": "1.0.0", "version_type": "release", "game_versions": ["1.21.4"], "date_published": "2024-01-01T00:00:00Z", "files": [{"url": "https://cdn.example.com/r.jar", "filename": "r.jar", "primary": true, "size": 1}]},
-		{"id": "b", "version_number": "1.1.0-beta.1", "version_type": "beta", "game_versions": ["1.21.4"], "date_published": "2024-02-01T00:00:00Z", "files": [{"url": "https://cdn.example.com/b.jar", "filename": "b.jar", "primary": true, "size": 1}]},
-		{"id": "a", "version_number": "1.2.0-alpha.1", "version_type": "alpha", "game_versions": ["1.21.4"], "date_published": "2024-03-01T00:00:00Z", "files": [{"url": "https://cdn.example.com/a.jar", "filename": "a.jar", "primary": true, "size": 1}]}
+		{"id": "r", "version_number": "1.0.0", "version_type": "release", "game_versions": ["1.21.4"], "loaders": ["paper"], "date_published": "2024-01-01T00:00:00Z", "files": [{"url": "https://cdn.example.com/r.jar", "filename": "r.jar", "primary": true, "size": 1}]},
+		{"id": "b", "version_number": "1.1.0-beta.1", "version_type": "beta", "game_versions": ["1.21.4"], "loaders": ["paper"], "date_published": "2024-02-01T00:00:00Z", "files": [{"url": "https://cdn.example.com/b.jar", "filename": "b.jar", "primary": true, "size": 1}]},
+		{"id": "a", "version_number": "1.2.0-alpha.1", "version_type": "alpha", "game_versions": ["1.21.4"], "loaders": ["paper"], "date_published": "2024-03-01T00:00:00Z", "files": [{"url": "https://cdn.example.com/a.jar", "filename": "a.jar", "primary": true, "size": 1}]}
 	]`
 
 	tests := []struct {
@@ -277,7 +316,7 @@ func TestModrinthResolveLatestStableNoRelease(t *testing.T) {
 	srv := newModrinthServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		writeResponse(t, w, `[
-			{"id": "b", "version_number": "1.1.0-beta.1", "version_type": "beta", "game_versions": ["1.21.4"], "date_published": "2024-02-01T00:00:00Z", "files": [{"url": "https://cdn.example.com/b.jar", "filename": "b.jar", "primary": true, "size": 1}]}
+			{"id": "b", "version_number": "1.1.0-beta.1", "version_type": "beta", "game_versions": ["1.21.4"], "loaders": ["paper"], "date_published": "2024-02-01T00:00:00Z", "files": [{"url": "https://cdn.example.com/b.jar", "filename": "b.jar", "primary": true, "size": 1}]}
 		]`)
 	})
 
@@ -295,7 +334,7 @@ func TestModrinthResolveLatestNoCompatible(t *testing.T) {
 	srv := newModrinthServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		writeResponse(t, w, `[
-			{"id": "r", "version_number": "1.0.0", "version_type": "release", "game_versions": ["1.20.4"], "date_published": "2024-01-01T00:00:00Z", "files": [{"url": "https://cdn.example.com/r.jar", "filename": "r.jar", "primary": true, "size": 1}]}
+			{"id": "r", "version_number": "1.0.0", "version_type": "release", "game_versions": ["1.20.4"], "loaders": ["paper"], "date_published": "2024-01-01T00:00:00Z", "files": [{"url": "https://cdn.example.com/r.jar", "filename": "r.jar", "primary": true, "size": 1}]}
 		]`)
 	})
 

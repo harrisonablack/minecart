@@ -15,6 +15,10 @@ import (
 
 const modrinthBaseURL = "https://api.modrinth.com/v2"
 
+// paperLoader is the Modrinth loader for Paper plugins. Only versions that
+// declare this loader are compatible with a Paper server.
+const paperLoader = "paper"
+
 // Modrinth resolves resources from the Modrinth API.
 //
 // The zero value is usable; client and baseURL default to a 30s-timeout
@@ -83,7 +87,7 @@ func (m Modrinth) resolveLatest(ctx context.Context, client *http.Client, baseUR
 		return artifact.Artifact{}, fmt.Errorf("modrinth: %w", err)
 	}
 
-	v, ok := latestCompatible(versions, mcVersion, spec.Channel)
+	v, ok := latestCompatible(versions, mcVersion, spec.Channel, paperLoader)
 	if !ok {
 		if spec.Channel == "" || spec.Channel == "stable" {
 			return artifact.Artifact{}, fmt.Errorf("modrinth: no stable release compatible with version %q", mcVersion)
@@ -112,6 +116,7 @@ type modrinthVersion struct {
 	VersionNumber string         `json:"version_number"`
 	VersionType   string         `json:"version_type"` // release | beta | alpha
 	GameVersions  []string       `json:"game_versions"`
+	Loaders       []string       `json:"loaders"`
 	DatePublished string         `json:"date_published"`
 	Files         []modrinthFile `json:"files"`
 }
@@ -155,12 +160,15 @@ func channelAllows(versionType, channel string) bool {
 }
 
 // latestCompatible returns the newest version whose game_versions includes
-// mcVersion and whose version_type satisfies the channel threshold. ok is
-// false when no version matches.
-func latestCompatible(versions []modrinthVersion, mcVersion, channel string) (modrinthVersion, bool) {
+// mcVersion, whose loaders includes loader, and whose version_type satisfies
+// the channel threshold. ok is false when no version matches.
+func latestCompatible(versions []modrinthVersion, mcVersion, channel, loader string) (modrinthVersion, bool) {
 	var candidates []modrinthVersion
 	for _, v := range versions {
 		if !contains(v.GameVersions, mcVersion) {
+			continue
+		}
+		if !contains(v.Loaders, loader) {
 			continue
 		}
 		if !channelAllows(v.VersionType, channel) {

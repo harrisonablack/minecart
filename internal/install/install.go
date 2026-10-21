@@ -73,6 +73,7 @@ func installServer(ctx context.Context, logger *slog.Logger, serverType string, 
 		Entry:       resolved.Entry,
 		Hashes:      resolved.Artifact.Hashes,
 		InstalledAt: time.Now().UTC(),
+		Plugins:     existing.Plugins,
 	}
 	if err := manifest.Write(path, m); err != nil {
 		return err

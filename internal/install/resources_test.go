@@ -2,6 +2,7 @@ package install
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -180,6 +181,9 @@ func TestInstallResourcesRedownloadsOnVersionChange(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "plugins", "luckperms-2.0.0.jar")); err != nil {
 		t.Errorf("new plugin jar should exist, stat err = %v", err)
 	}
+	if _, err := os.Stat(filepath.Join(dir, "plugins", "luckperms-1.0.0.jar")); !os.IsNotExist(err) {
+		t.Errorf("old plugin jar should be removed, stat err = %v", err)
+	}
 	got, err := manifest.Read(manifest.Path(dir))
 	if err != nil {
 		t.Fatalf("read manifest: %v", err)
@@ -239,6 +243,98 @@ func TestInstallResourcesSyncRemovesUndeclared(t *testing.T) {
 	}
 	if len(got.Plugins) != 1 || got.Plugins[0].Name != "luckperms" {
 		t.Errorf("Plugins = %+v, want [luckperms]", got.Plugins)
+	}
+}
+
+func TestInstallResourcesSyncRemovesAllWhenEmpty(t *testing.T) {
+	content := []byte("plugin jar")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		writeResponse(t, w, content)
+	}))
+	t.Cleanup(srv.Close)
+
+	stubResolver(t, fakeResolver{version: "1.0.0", content: content, serverURL: srv.URL}.resolve)
+
+	dir := t.TempDir()
+	writeServerManifest(t, dir)
+
+	installed := config.Config{
+		Directory: dir,
+		Server:    config.ServerConfig{Type: "paper"},
+		Resources: config.ResourcesConfig{
+			Plugins: []config.ResourceSpec{{Name: "luckperms", Provider: "modrinth"}},
+		},
+	}
+	if err := installResources(context.Background(), discardLogger(), installed, "1.21.4"); err != nil {
+		t.Fatalf("install plugin: %v", err)
+	}
+
+	empty := config.Config{
+		Directory: dir,
+		Server:    config.ServerConfig{Type: "paper"},
+		Resources: config.ResourcesConfig{Sync: true},
+	}
+	if err := installResources(context.Background(), discardLogger(), empty, "1.21.4"); err != nil {
+		t.Fatalf("install with empty sync: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, "plugins", "luckperms-1.0.0.jar")); !os.IsNotExist(err) {
+		t.Errorf("plugin should be removed, stat err = %v", err)
+	}
+	got, err := manifest.Read(manifest.Path(dir))
+	if err != nil {
+		t.Fatalf("read manifest: %v", err)
+	}
+	if len(got.Plugins) != 0 {
+		t.Errorf("Plugins = %+v, want empty", got.Plugins)
+	}
+}
+
+func TestInstallResourcesRecordsCompletedOnFailure(t *testing.T) {
+	content := []byte("plugin jar")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		writeResponse(t, w, content)
+	}))
+	t.Cleanup(srv.Close)
+
+	stubResolver(t, func(ctx context.Context, spec config.ResourceSpec, mcVersion string) (artifact.Artifact, error) {
+		if spec.Name == "viaversion" {
+			return artifact.Artifact{}, fmt.Errorf("boom")
+		}
+		return artifact.Artifact{
+			Name:     spec.Name,
+			Version:  "1.0.0",
+			URL:      srv.URL + "/" + spec.Name + ".jar",
+			Filename: spec.Name + "-1.0.0.jar",
+			Hashes:   map[string]string{"sha256": sha256Hex(content)},
+			Size:     int64(len(content)),
+		}, nil
+	})
+
+	dir := t.TempDir()
+	writeServerManifest(t, dir)
+
+	cfg := config.Config{
+		Directory: dir,
+		Server:    config.ServerConfig{Type: "paper"},
+		Resources: config.ResourcesConfig{
+			Plugins: []config.ResourceSpec{
+				{Name: "luckperms", Provider: "modrinth"},
+				{Name: "viaversion", Provider: "modrinth"},
+			},
+		},
+	}
+
+	if err := installResources(context.Background(), discardLogger(), cfg, "1.21.4"); err == nil {
+		t.Fatal("installResources: expected error for viaversion, got nil")
+	}
+
+	got, err := manifest.Read(manifest.Path(dir))
+	if err != nil {
+		t.Fatalf("read manifest: %v", err)
+	}
+	if len(got.Plugins) != 1 || got.Plugins[0].Name != "luckperms" {
+		t.Errorf("Plugins = %+v, want [luckperms] recorded despite failure", got.Plugins)
 	}
 }
 
