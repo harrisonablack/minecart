@@ -1,4 +1,5 @@
-package install
+// Package download fetches and verifies artifacts.
+package download
 
 import (
 	"context"
@@ -34,6 +35,17 @@ func Download(ctx context.Context, logger *slog.Logger, a artifact.Artifact, dir
 	}
 
 	return nil
+}
+
+// Present reports whether the artifact is already present at path. It verifies
+// the hash when one is available, otherwise it only checks that the file
+// exists.
+func Present(a artifact.Artifact, path string) bool {
+	if algo, _ := strongestHash(a.Hashes); algo != "" {
+		return matches(a, path)
+	}
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 // download fetches a.URL and writes it to dest, logging progress.

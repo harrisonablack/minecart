@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/harrisonablack/minecart/internal/config"
+	"github.com/harrisonablack/minecart/internal/download"
 	"github.com/harrisonablack/minecart/internal/manifest"
 	"github.com/harrisonablack/minecart/internal/provider"
 )
@@ -58,14 +59,14 @@ func installResources(ctx context.Context, logger *slog.Logger, cfg config.Confi
 		var oldFilename string
 		if idx, ok := existing[key]; ok {
 			entry := m.Plugins[idx]
-			if entry.Version == art.Version && fileMatches(art, filepath.Join(pluginsDir, entry.Filename)) {
+			if entry.Version == art.Version && download.Present(art, filepath.Join(pluginsDir, entry.Filename)) {
 				logger.Info("plugin already current", "plugin", spec.Name, "version", art.Version)
 				continue
 			}
 			oldFilename = entry.Filename
 		}
 
-		if err := Download(ctx, logger, art, pluginsDir); err != nil {
+		if err := download.Download(ctx, logger, art, pluginsDir); err != nil {
 			return fmt.Errorf("download plugin %q: %w", spec.Name, err)
 		}
 

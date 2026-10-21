@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/harrisonablack/minecart/internal/artifact"
 	"github.com/harrisonablack/minecart/internal/config"
+	"github.com/harrisonablack/minecart/internal/download"
 	"github.com/harrisonablack/minecart/internal/manifest"
 	"github.com/harrisonablack/minecart/internal/platform"
 )
@@ -54,7 +54,7 @@ func installServer(ctx context.Context, logger *slog.Logger, serverType string, 
 	}
 
 	dest := filepath.Join(dir, resolved.Artifact.Filename)
-	if existing.Identity == resolved.Identity && fileMatches(resolved.Artifact, dest) {
+	if existing.Identity == resolved.Identity && download.Present(resolved.Artifact, dest) {
 		logger.Info("already current", "identity", resolved.Identity, "file", dest)
 		return nil
 	}
@@ -63,7 +63,7 @@ func installServer(ctx context.Context, logger *slog.Logger, serverType string, 
 		logger.Info("updating server", "from", existing.Identity, "to", resolved.Identity)
 	}
 
-	if err := Download(ctx, logger, resolved.Artifact, dir); err != nil {
+	if err := download.Download(ctx, logger, resolved.Artifact, dir); err != nil {
 		return err
 	}
 
@@ -87,17 +87,6 @@ func installServer(ctx context.Context, logger *slog.Logger, serverType string, 
 	}
 
 	return nil
-}
-
-// fileMatches reports whether the artifact is already present at dest. It
-// verifies the hash when one is available, otherwise it only checks that the
-// file exists.
-func fileMatches(a artifact.Artifact, dest string) bool {
-	if algo, _ := strongestHash(a.Hashes); algo != "" {
-		return matches(a, dest)
-	}
-	_, err := os.Stat(dest)
-	return err == nil
 }
 
 // removeStale deletes a previous entry point from dir. Failures are logged
