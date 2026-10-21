@@ -72,8 +72,9 @@ func (v vanilla) resolve(ctx context.Context, version string) (Resolved, error) 
 			Hashes:   map[string]string{"sha1": vj.Downloads.Server.SHA1},
 			Size:     vj.Downloads.Server.Size,
 		},
-		Entry:    manifest.Entry{Type: manifest.EntryJava, Point: filename},
-		Identity: "vanilla-" + version,
+		Entry:            manifest.Entry{Type: manifest.EntryJava, Point: filename},
+		Identity:         "vanilla-" + version,
+		MinecraftVersion: version,
 	}, nil
 }
 

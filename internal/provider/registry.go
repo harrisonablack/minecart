@@ -16,11 +16,11 @@ var registry = map[string]Provider{
 	// "url":        URL{},        // future
 }
 
-// Resolve resolves a mod spec through the provider named by spec.Provider.
-func Resolve(ctx context.Context, spec config.ModSpec) (artifact.Artifact, error) {
+// Resolve resolves a resource spec through the provider named by spec.Provider.
+func Resolve(ctx context.Context, spec config.ResourceSpec, mcVersion string) (artifact.Artifact, error) {
 	s, ok := registry[spec.Provider]
 	if !ok {
 		return artifact.Artifact{}, fmt.Errorf("unknown provider %q", spec.Provider)
 	}
-	return s.Resolve(ctx, spec)
+	return s.Resolve(ctx, spec, mcVersion)
 }

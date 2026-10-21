@@ -70,6 +70,9 @@ func TestResolvePaperLatest(t *testing.T) {
 	if res.Identity != "paper-26.3-206" {
 		t.Errorf("Identity = %q, want %q", res.Identity, "paper-26.3-206")
 	}
+	if res.MinecraftVersion != "26.3" {
+		t.Errorf("MinecraftVersion = %q, want %q", res.MinecraftVersion, "26.3")
+	}
 }
 
 func TestResolvePaperLatestSkipsUnstableVersions(t *testing.T) {
@@ -167,6 +170,9 @@ func TestResolvePaper(t *testing.T) {
 	}
 	if res.Identity != "paper-1.21.4-232" {
 		t.Errorf("Identity = %q, want %q", res.Identity, "paper-1.21.4-232")
+	}
+	if res.MinecraftVersion != "1.21.4" {
+		t.Errorf("MinecraftVersion = %q, want %q", res.MinecraftVersion, "1.21.4")
 	}
 }
 

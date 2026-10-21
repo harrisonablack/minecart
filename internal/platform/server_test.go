@@ -82,6 +82,9 @@ func TestResolveVanilla(t *testing.T) {
 	if res.Identity != "vanilla-26.3" {
 		t.Errorf("Identity = %q, want %q", res.Identity, "vanilla-26.3")
 	}
+	if res.MinecraftVersion != "26.3" {
+		t.Errorf("MinecraftVersion = %q, want %q", res.MinecraftVersion, "26.3")
+	}
 }
 
 func TestResolveVanillaVersionNotFound(t *testing.T) {
@@ -112,6 +115,9 @@ func TestResolveVanillaLatest(t *testing.T) {
 	}
 	if res.Identity != "vanilla-26.3" {
 		t.Errorf("Identity = %q, want %q", res.Identity, "vanilla-26.3")
+	}
+	if res.MinecraftVersion != "26.3" {
+		t.Errorf("MinecraftVersion = %q, want %q", res.MinecraftVersion, "26.3")
 	}
 }
 
