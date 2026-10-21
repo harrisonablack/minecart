@@ -14,6 +14,7 @@
 
 Start with [`minecart.example.yml`](minecart.example.yml). Declare server settings
 under `config.files` to merge them into configuration files before every launch.
+Supported destinations are `.properties`, `.yml`, and `.yaml` files.
 Undeclared values are preserved; removing a declaration leaves its stored value
 in place.
 
