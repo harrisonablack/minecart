@@ -1,0 +1,6 @@
+/* VitePress's base reset sets `img { display: block }`, which stacks badge
+   images vertically. Restore inline layout so badges sit side by side. */
+.vp-doc img {
+  display: inline-block;
+  vertical-align: middle;
+}

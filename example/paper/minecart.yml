@@ -1,0 +1,13 @@
+server:
+  type: paper
+  version: latest
+  eula: true
+  memory: "6G"
+
+config:
+  files:
+    server.properties:
+      motd: "Custom MOTD"
+      max-players: 99
+      view-distance: 32
+      difficulty: hard

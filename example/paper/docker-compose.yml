@@ -1,0 +1,11 @@
+services:
+  minecart:
+    image: ghcr.io/harrisonablack/minecart
+    tty: true
+    stdin_open: true
+    ports:
+      - "25565:25565"
+    volumes:
+      - ./minecart.yml:/app/minecart.yml:ro
+      - ./paper:/data
+    restart: unless-stopped
