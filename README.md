@@ -10,13 +10,5 @@
 > [!IMPORTANT]
 > Minecart is currently in very early development and is subject to frequent breaking changes
 
-## Configuration
+Documentation available at [minecart.dev](https://minecart.dev)
 
-Start with [`minecart.example.yml`](minecart.example.yml). Declare server settings
-under `config.files` to merge them into configuration files before every launch.
-Supported destinations are `.properties`, `.yml`, and `.yaml` files.
-Undeclared values are preserved; removing a declaration leaves its stored value
-in place.
-
-See the [configuration documentation](docs/configuration.md) for supported formats,
-examples, and launch behavior.
