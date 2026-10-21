@@ -1,6 +1,7 @@
 package config
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -48,9 +49,11 @@ func Apply(logger *slog.Logger, cfg Config) error {
 // writeConfig stages the complete result alongside the destination so rename
 // replaces it atomically on the same filesystem. Existing permissions survive.
 func writeConfig(path string, data []byte) error {
-	mode := os.FileMode(0o644)
+	var existingMode os.FileMode
+	exists := false
 	if info, err := os.Stat(path); err == nil {
-		mode = info.Mode().Perm()
+		existingMode = info.Mode().Perm()
+		exists = true
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("stat destination: %w", err)
 	}
@@ -59,15 +62,20 @@ func writeConfig(path string, data []byte) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("create directory: %w", err)
 	}
-	f, err := os.CreateTemp(dir, "."+filepath.Base(path)+".*")
+	// OpenFile applies the process umask to new files. CreateTemp followed by
+	// Chmod(0644) would bypass it. O_EXCL keeps temporary-file creation exclusive.
+	tmp := filepath.Join(dir, "."+filepath.Base(path)+"."+rand.Text())
+	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
 	if err != nil {
 		return fmt.Errorf("create temporary file: %w", err)
 	}
 	defer func() { _ = os.Remove(f.Name()) }()
 	defer func() { _ = f.Close() }()
 
-	if err := f.Chmod(mode); err != nil {
-		return fmt.Errorf("set permissions: %w", err)
+	if exists {
+		if err := f.Chmod(existingMode); err != nil {
+			return fmt.Errorf("set permissions: %w", err)
+		}
 	}
 	if _, err := f.Write(data); err != nil {
 		return fmt.Errorf("write temporary file: %w", err)

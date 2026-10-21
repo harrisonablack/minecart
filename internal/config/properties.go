@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"strconv"
 
 	"github.com/magiconair/properties"
 )
@@ -53,11 +54,16 @@ func mergeProperties(path string, values map[string]any) ([]byte, error) {
 }
 
 func propertyValue(value any) (string, error) {
-	switch value.(type) {
+	switch v := value.(type) {
+	case float32:
+		return strconv.FormatFloat(float64(v), 'f', -1, 32), nil
+	case float64:
+		// JSON numbers arrive as floats, including integer settings. Avoid
+		// exponent notation that Java's integer parsers do not accept.
+		return strconv.FormatFloat(v, 'f', -1, 64), nil
 	case string, bool,
 		int, int8, int16, int32, int64,
-		uint, uint8, uint16, uint32, uint64,
-		float32, float64:
+		uint, uint8, uint16, uint32, uint64:
 		return fmt.Sprint(value), nil
 	default:
 		return "", fmt.Errorf("expected a string, number, or boolean, got %T", value)

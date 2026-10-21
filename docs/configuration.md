@@ -66,7 +66,7 @@ apply even when the installation is already current.
 - Comments and formatting may change when a managed file is rewritten.
 - Read, parse, merge, and write errors abort the launch. Correct the problem and
   invoke Minecart again to retry configuration application.
-- Each file is replaced atomically, preserving existing file permissions. Files
-  are processed in filename order; successful earlier writes remain if a later
-  file fails. The installation manifest records installation independently of
-  configuration application.
+- Each file is replaced atomically, preserving existing file permissions. New
+  files use `0644` restricted by the process umask. Files are processed in filename
+  order; successful earlier writes remain if a later file fails. The installation
+  manifest records installation independently of configuration application.

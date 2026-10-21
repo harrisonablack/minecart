@@ -5,9 +5,11 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/magiconair/properties"
@@ -125,6 +127,34 @@ func TestApplyPropertiesRejectsCollectionsAndNull(t *testing.T) {
 	}
 }
 
+func TestApplyNumericProperties(t *testing.T) {
+	for _, name := range []string{"minecart.yml", "minecart.json"} {
+		t.Run(name, func(t *testing.T) {
+			input := writeFile(t, name, `{
+  "server": {"type": "paper", "version": "latest", "eula": true},
+  "config": {"files": {"server.properties": {
+    "max-world-size": 29999984,
+    "large": 10000000.0,
+    "small": 0.0000001,
+    "ratio": 1.25
+  }}}
+}`)
+			cfg, err := Load(input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cfg.Directory = t.TempDir()
+			if err := Apply(quietLogger(), *cfg); err != nil {
+				t.Fatal(err)
+			}
+			want := map[string]string{"max-world-size": "29999984", "large": "10000000", "small": "0.0000001", "ratio": "1.25"}
+			if got := readProperties(t, filepath.Join(cfg.Directory, "server.properties")); !reflect.DeepEqual(got, want) {
+				t.Fatalf("numeric properties = %#v, want %#v", got, want)
+			}
+		})
+	}
+}
+
 func TestApplyPartialFailureAndRetry(t *testing.T) {
 	dir := t.TempDir()
 	bad := filepath.Join(dir, "b.properties")
@@ -222,5 +252,43 @@ func TestWriteConfigCleansUpFailedReplacement(t *testing.T) {
 	entries, err := os.ReadDir(dir)
 	if err != nil || len(entries) != 1 {
 		t.Fatalf("temporary file leaked: %v, %v", entries, err)
+	}
+}
+
+func TestWriteConfigRespectsUmask(t *testing.T) {
+	// A subprocess keeps the process-global umask isolated from other tests.
+	if dir := os.Getenv("MINECART_TEST_UMASK_DIR"); dir != "" {
+		previous := syscall.Umask(0o077)
+		defer syscall.Umask(previous)
+		for _, name := range []string{"new.properties", "existing.properties"} {
+			if err := writeConfig(filepath.Join(dir, name), []byte("password=secret\n")); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return
+	}
+	dir := t.TempDir()
+	existing := filepath.Join(dir, "existing.properties")
+	putFile(t, existing, "old=value\n")
+	if err := os.Chmod(existing, 0o640); err != nil {
+		t.Fatal(err)
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.CommandContext(t.Context(), exe, "-test.run=^TestWriteConfigRespectsUmask$")
+	cmd.Env = append(os.Environ(), "MINECART_TEST_UMASK_DIR="+dir)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("private umask subprocess: %v\n%s", err, out)
+	}
+	for name, mode := range map[string]os.FileMode{"new.properties": 0o600, "existing.properties": 0o640} {
+		info, err := os.Stat(filepath.Join(dir, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := info.Mode().Perm(); got != mode {
+			t.Errorf("%s permissions = %o, want %o", name, got, mode)
+		}
 	}
 }
