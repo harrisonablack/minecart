@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/harrisonablack/minecart/internal/artifact"
+	"github.com/harrisonablack/minecart/internal/httpx"
 	"github.com/harrisonablack/minecart/internal/manifest"
 )
 
@@ -84,7 +85,7 @@ func (p paper) resolve(ctx context.Context, version string) (Resolved, error) {
 // versions are tried in turn.
 func latestStableVersion(ctx context.Context, client *http.Client, baseURL string) (string, paperBuild, error) {
 	var vs paperVersions
-	if err := getJSON(ctx, client, baseURL+"/projects/paper/versions", &vs); err != nil {
+	if err := httpx.GetJSON(ctx, client, baseURL+"/projects/paper/versions", &vs); err != nil {
 		return "", paperBuild{}, fmt.Errorf("fetch versions: %w", err)
 	}
 	if len(vs.Versions) == 0 {
@@ -109,7 +110,7 @@ func stableBuild(ctx context.Context, client *http.Client, baseURL, version stri
 	url := fmt.Sprintf("%s/projects/paper/versions/%s/builds", baseURL, version)
 
 	var builds []paperBuild
-	if err := getJSON(ctx, client, url, &builds); err != nil {
+	if err := httpx.GetJSON(ctx, client, url, &builds); err != nil {
 		return paperBuild{}, false, fmt.Errorf("fetch builds for version %q: %w", version, err)
 	}
 
