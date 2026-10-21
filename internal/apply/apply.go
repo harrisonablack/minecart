@@ -1,4 +1,5 @@
-// Package apply merges declared configuration into server files before launch.
+// Package apply prepares server files before launch: it writes eula.txt and
+// merges declared configuration into server files.
 package apply
 
 import (
@@ -14,6 +15,17 @@ import (
 
 	"github.com/harrisonablack/minecart/internal/config"
 )
+
+// Run writes eula.txt and merges declared values into configuration files
+// before a server launch.
+func Run(logger *slog.Logger, cfg config.Config) error {
+	if err := writeEULA(cfg.Directory); err != nil {
+		return err
+	}
+	logger.Info("wrote eula.txt", "directory", cfg.Directory)
+
+	return Apply(logger, cfg)
+}
 
 // Apply merges declared values into configuration files before a server launch.
 // Each file is replaced atomically. If a later file fails, earlier successful
@@ -105,4 +117,16 @@ func createConfigTemp(path string, exists bool) (*os.File, error) {
 	// Chmod(0644) would bypass it. O_EXCL keeps temporary-file creation exclusive.
 	tmp := filepath.Join(filepath.Dir(path), "."+filepath.Base(path)+"."+rand.Text())
 	return os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_EXCL, mode)
+}
+
+// writeEULA writes eula.txt with eula=true into dir.
+func writeEULA(dir string) error {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("create directory: %w", err)
+	}
+	path := filepath.Join(dir, "eula.txt")
+	if err := os.WriteFile(path, []byte("eula=true\n"), 0o644); err != nil {
+		return fmt.Errorf("write eula.txt: %w", err)
+	}
+	return nil
 }

@@ -27,7 +27,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := apply.Apply(logger, *cfg); err != nil {
+	if err := apply.Run(logger, *cfg); err != nil {
 		logger.Error("apply configuration", "error", err)
 		os.Exit(1)
 	}

@@ -17,8 +17,8 @@ import (
 	"github.com/harrisonablack/minecart/internal/platform"
 )
 
-// Run resolves the server, installs it when the manifest shows it is missing
-// or out of date, and writes eula.txt.
+// Run resolves the server and installs it when the manifest shows it is
+// missing or out of date.
 func Run(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
 	resolved, err := platform.Resolve(ctx, cfg.Server)
 	if err != nil {
@@ -30,11 +30,6 @@ func Run(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
 	if err := installServer(ctx, logger, cfg.Server.Type, resolved, cfg.Directory); err != nil {
 		return err
 	}
-
-	if err := writeEULA(cfg.Directory); err != nil {
-		return err
-	}
-	logger.Info("wrote eula.txt", "directory", cfg.Directory)
 
 	if err := installResources(ctx, logger, cfg, resolved.MinecraftVersion); err != nil {
 		return err
@@ -104,16 +99,4 @@ func removeStale(logger *slog.Logger, dir, name string) {
 		return
 	}
 	logger.Info("removed stale entry", "file", stale)
-}
-
-// writeEULA writes eula.txt with eula=true into dir.
-func writeEULA(dir string) error {
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("create directory: %w", err)
-	}
-	path := filepath.Join(dir, "eula.txt")
-	if err := os.WriteFile(path, []byte("eula=true\n"), 0o644); err != nil {
-		return fmt.Errorf("write eula.txt: %w", err)
-	}
-	return nil
 }

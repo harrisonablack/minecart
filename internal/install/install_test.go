@@ -36,21 +36,6 @@ func writeResponse(t *testing.T, w http.ResponseWriter, body []byte) {
 	}
 }
 
-func TestWriteEULA(t *testing.T) {
-	dir := t.TempDir()
-	if err := writeEULA(dir); err != nil {
-		t.Fatalf("writeEULA: %v", err)
-	}
-
-	got, err := os.ReadFile(filepath.Join(dir, "eula.txt"))
-	if err != nil {
-		t.Fatalf("read eula.txt: %v", err)
-	}
-	if string(got) != "eula=true\n" {
-		t.Errorf("eula.txt = %q, want %q", got, "eula=true\n")
-	}
-}
-
 // paperResolved builds a resolved paper server for build served at srvURL.
 func paperResolved(srvURL string, build int, content []byte) platform.Resolved {
 	filename := fmt.Sprintf("paper-1.21.4-%d.jar", build)
