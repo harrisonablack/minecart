@@ -62,10 +62,7 @@ func writeConfig(path string, data []byte) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("create directory: %w", err)
 	}
-	// OpenFile applies the process umask to new files. CreateTemp followed by
-	// Chmod(0644) would bypass it. O_EXCL keeps temporary-file creation exclusive.
-	tmp := filepath.Join(dir, "."+filepath.Base(path)+"."+rand.Text())
-	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	f, err := createConfigTemp(path, exists)
 	if err != nil {
 		return fmt.Errorf("create temporary file: %w", err)
 	}
@@ -90,4 +87,17 @@ func writeConfig(path string, data []byte) error {
 		return fmt.Errorf("replace destination: %w", err)
 	}
 	return nil
+}
+
+func createConfigTemp(path string, exists bool) (*os.File, error) {
+	mode := os.FileMode(0o644)
+	if exists {
+		// Start private: chmod cannot revoke access from a file descriptor
+		// opened between creation and restoring the destination's permissions.
+		mode = 0o600
+	}
+	// OpenFile applies the process umask to new files. CreateTemp followed by
+	// Chmod(0644) would bypass it. O_EXCL keeps temporary-file creation exclusive.
+	tmp := filepath.Join(filepath.Dir(path), "."+filepath.Base(path)+"."+rand.Text())
+	return os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_EXCL, mode)
 }

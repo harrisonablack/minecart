@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -258,37 +259,72 @@ func TestWriteConfigCleansUpFailedReplacement(t *testing.T) {
 func TestWriteConfigRespectsUmask(t *testing.T) {
 	// A subprocess keeps the process-global umask isolated from other tests.
 	if dir := os.Getenv("MINECART_TEST_UMASK_DIR"); dir != "" {
-		previous := syscall.Umask(0o077)
+		mask, err := strconv.ParseUint(os.Getenv("MINECART_TEST_UMASK"), 8, 32)
+		if err != nil {
+			t.Fatal(err)
+		}
+		previous := syscall.Umask(int(mask))
 		defer syscall.Umask(previous)
-		for _, name := range []string{"new.properties", "existing.properties"} {
-			if err := writeConfig(filepath.Join(dir, name), []byte("password=secret\n")); err != nil {
+		for _, name := range []string{"new.properties", "existing.properties", "private.properties"} {
+			path := filepath.Join(dir, name)
+			exists := name != "new.properties"
+			// Check the file immediately after creation, before writeConfig can
+			// chmod it. A final-mode assertion alone cannot detect the exposure.
+			f, err := createConfigTemp(path, exists)
+			if err != nil {
+				t.Fatal(err)
+			}
+			info, err := f.Stat()
+			_ = f.Close()
+			_ = os.Remove(f.Name())
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := os.FileMode(0o644) &^ os.FileMode(mask)
+			if exists {
+				want = 0o600 &^ os.FileMode(mask)
+			}
+			if got := info.Mode().Perm(); got != want {
+				t.Errorf("%s temporary permissions at creation = %o, want %o", name, got, want)
+			}
+			if err := writeConfig(path, []byte("password=secret\n")); err != nil {
 				t.Fatal(err)
 			}
 		}
 		return
 	}
-	dir := t.TempDir()
-	existing := filepath.Join(dir, "existing.properties")
-	putFile(t, existing, "old=value\n")
-	if err := os.Chmod(existing, 0o640); err != nil {
-		t.Fatal(err)
-	}
 	exe, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.CommandContext(t.Context(), exe, "-test.run=^TestWriteConfigRespectsUmask$")
-	cmd.Env = append(os.Environ(), "MINECART_TEST_UMASK_DIR="+dir)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("private umask subprocess: %v\n%s", err, out)
-	}
-	for name, mode := range map[string]os.FileMode{"new.properties": 0o600, "existing.properties": 0o640} {
-		info, err := os.Stat(filepath.Join(dir, name))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if got := info.Mode().Perm(); got != mode {
-			t.Errorf("%s permissions = %o, want %o", name, got, mode)
-		}
+	for mask, newMode := range map[string]os.FileMode{"022": 0o644, "077": 0o600} {
+		t.Run(mask, func(t *testing.T) {
+			dir := t.TempDir()
+			for name, mode := range map[string]os.FileMode{"existing.properties": 0o640, "private.properties": 0o600} {
+				path := filepath.Join(dir, name)
+				putFile(t, path, "old=value\n")
+				if err := os.Chmod(path, mode); err != nil {
+					t.Fatal(err)
+				}
+			}
+			cmd := exec.CommandContext(t.Context(), exe, "-test.run=^TestWriteConfigRespectsUmask$")
+			cmd.Env = append(os.Environ(), "MINECART_TEST_UMASK_DIR="+dir, "MINECART_TEST_UMASK="+mask)
+			if out, err := cmd.CombinedOutput(); err != nil {
+				t.Fatalf("umask subprocess: %v\n%s", err, out)
+			}
+			for name, mode := range map[string]os.FileMode{"new.properties": newMode, "existing.properties": 0o640, "private.properties": 0o600} {
+				path := filepath.Join(dir, name)
+				info, err := os.Stat(path)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got := info.Mode().Perm(); got != mode {
+					t.Errorf("%s permissions = %o, want %o", name, got, mode)
+				}
+				if got := string(readFile(t, path)); got != "password=secret\n" {
+					t.Errorf("%s contents = %q", name, got)
+				}
+			}
+		})
 	}
 }
