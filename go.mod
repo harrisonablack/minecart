@@ -11,6 +11,7 @@ require (
 	github.com/knadh/koanf/providers/file v1.2.1
 	github.com/knadh/koanf/v2 v2.4.0
 	github.com/lmittmann/tint v1.2.1
+	github.com/magiconair/properties v1.18.12
 	go.yaml.in/yaml/v3 v3.0.3
 	golang.org/x/sys v0.32.0
 )

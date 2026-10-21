@@ -10,6 +10,13 @@ type Config struct {
 	Directory string       `koanf:"directory"`
 	Server    ServerConfig `koanf:"server"`
 	Mods      []ModSpec    `koanf:"mods"`
+	Config    FileConfig   `koanf:"config"`
+}
+
+// FileConfig declares values to merge into files relative to Directory.
+// Filenames and setting keys are literal, including any dots.
+type FileConfig struct {
+	Files map[string]map[string]any `koanf:"files"`
 }
 
 // ServerConfig describes the Minecraft server to install and run.

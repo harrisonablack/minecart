@@ -26,6 +26,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := config.Apply(logger, *cfg); err != nil {
+		logger.Error("apply configuration", "error", err)
+		os.Exit(1)
+	}
+
 	if err := run.Server(ctx, logger, *cfg); err != nil {
 		logger.Error("run", "error", err)
 		os.Exit(1)

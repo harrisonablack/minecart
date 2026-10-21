@@ -3,7 +3,9 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -14,6 +16,68 @@ func writeFile(t *testing.T, name, content string) string {
 		t.Fatalf("write %s: %v", name, err)
 	}
 	return path
+}
+
+func TestLoadFileDeclarations(t *testing.T) {
+	for _, name := range []string{"minecart.yml", "minecart.json"} {
+		t.Run(name, func(t *testing.T) {
+			// JSON is also YAML: exercise both application parsers with the same
+			// declaration, including literal and nested keys that flatten alike.
+			path := writeFile(t, name, `{
+  "server": {"type": "paper", "version": "latest", "eula": true, "memory": "2G"},
+  "config": {"files": {
+    "server.properties": {"rcon.port": 25575, "motd": "", "online-mode": true},
+    "plugins/example.config.yml": {
+      "query.port": "literal", "query": {"port": "nested"}, "nullable": null
+    }
+  }}
+}`)
+			t.Setenv("MINECART_CONFIG", path)
+			t.Setenv("MINECART_SERVER_MEMORY", "4G")
+			cfg, err := LoadDefault()
+			if err != nil {
+				t.Fatalf("LoadDefault: %v", err)
+			}
+			if cfg.Directory != "server" || cfg.Server.Memory != "4G" {
+				t.Fatalf("defaults/env overrides lost: %+v", cfg)
+			}
+			props := cfg.Config.Files["server.properties"]
+			if len(props) != 3 || props["motd"] != "" || props["online-mode"] != true {
+				t.Fatalf("properties declaration = %#v", props)
+			}
+			// JSON numbers are float64, while YAML retains integers.
+			if got, err := propertyValue(props["rcon.port"]); err != nil || got != "25575" {
+				t.Fatalf("literal rcon.port = %q, %v", got, err)
+			}
+			want := map[string]any{
+				"query.port": "literal",
+				"query":      map[string]any{"port": "nested"},
+				"nullable":   nil,
+			}
+			if got := cfg.Config.Files["plugins/example.config.yml"]; !reflect.DeepEqual(got, want) {
+				t.Fatalf("nested declaration = %#v, want %#v", got, want)
+			}
+		})
+	}
+}
+
+func TestLoadRejectsNonMappingDeclarations(t *testing.T) {
+	for _, section := range []string{
+		"config: text",
+		"config: []",
+		"config: {files: []}",
+		"config: {files: [{server.properties: {motd: hello}}]}",
+		"config: {files: {server.properties: null}}",
+		"config: {files: {server.properties: [{motd: hello}]}}",
+		"config: {files: {server.properties: text}}",
+	} {
+		t.Run(section, func(t *testing.T) {
+			path := writeFile(t, "minecart.yml", "server: {type: paper, version: latest, eula: true}\n"+section)
+			if _, err := Load(path); err == nil || !strings.Contains(err.Error(), "must be a mapping") {
+				t.Fatalf("Load: expected mapping error, got %v", err)
+			}
+		})
+	}
 }
 
 func TestLoadYAML(t *testing.T) {
