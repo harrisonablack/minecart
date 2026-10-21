@@ -4,6 +4,9 @@
 
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/w/harrisonablack/minecart) ![GitHub Closed Pull Requests](https://img.shields.io/github/issues-pr-closed/harrisonablack/minecart) ![GitHub Issues](https://img.shields.io/github/issues/harrisonablack/minecart)
 
+> [!IMPORTANT]
+> Minecart is currently in early development and is subject to breaking changes. Some features (such as automatic plugin installation) are currently limited to Paper and will be expanded to additional server types in the future.
+
 ## Quick Start
 
 Minecart is configured by a single `minecart.yml` file, this describes the current server, resources and configuration. 
@@ -49,6 +52,6 @@ To then attach to the console, use;
 docker compose attach minecart
 ```
 
-The server will now be availably local at `localhost:25565`
+The server will now be available locally at `localhost:25565`.
 
 For a more verbose initial setup, please see [getting started](./getting-started.md), for further configuration, please see [configuration](./configuration.md)
