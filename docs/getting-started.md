@@ -104,6 +104,9 @@ The container uses two volume mounts:
 1. `./minecart.yml:/app/minecart.yml:ro` mounts your configuration file read-only into Minecart's working directory (`/app`).
 2. `./data:/data` persists the server installation, world data, plugins, and generated configuration files in `./data` on the host.
 
+> [!NOTE]
+> The container runs as an unprivileged user (`UID 10001`). On Linux hosts, if `./data` does not exist yet, Docker will create it as `root` and Minecart will fail with a permission error. Create the directory and set its ownership before starting (e.g. `mkdir -p data && sudo chown 10001:10001 data`), or use a named Docker volume instead.
+
 Start the container in the background:
 
 ```bash

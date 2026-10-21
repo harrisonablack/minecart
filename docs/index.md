@@ -46,6 +46,9 @@ The server can then be started using;
 docker compose up -d
 ```
 
+> [!NOTE]
+> The container runs as an unprivileged user (`UID 10001`). On Linux hosts, ensure `./data` exists and is writable by `UID 10001` before starting (e.g. `mkdir -p data && sudo chown 10001:10001 data`), or use a named Docker volume instead.
+
 To then attach to the console, use;
 
 ```bash
