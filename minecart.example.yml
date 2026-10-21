@@ -15,3 +15,16 @@ server:
   memory: "2G"
   # Extra arguments passed to the server.
   args: ["nogui"]
+
+# Merge these values into files before every server launch.
+# Paths are relative to directory. Omit config.files to manage no files.
+# Undeclared values survive; removing a declaration does not reset its value.
+config:
+  files:
+    server.properties:
+      motd: "My server"
+      max-players: 20
+      # Dots in property keys are literal.
+      rcon.port: 25575
+      # Properties accept strings, numbers, and booleans, including empty strings.
+      resource-pack: ""

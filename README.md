@@ -9,3 +9,13 @@
 
 > [!IMPORTANT]
 > Minecart is currently in very early development and is subject to frequent breaking changes
+
+## Configuration
+
+Start with [`minecart.example.yml`](minecart.example.yml). Declare server settings
+under `config.files` to merge them into configuration files before every launch.
+Undeclared values are preserved; removing a declaration leaves its stored value
+in place.
+
+See the [configuration documentation](docs/configuration.md) for supported formats,
+examples, and launch behavior.

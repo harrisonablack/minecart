@@ -36,6 +36,14 @@ func Load(path string) (*Config, error) {
 		return nil, fmt.Errorf("load env: %w", err)
 	}
 
+	// Check declaration shapes before the weakly typed application decoder can
+	// coerce them (for example, a list of maps into a single map).
+	if err := validateFileMaps(k.Raw()["config"]); err != nil {
+		return nil, err
+	}
+
+	// Decode the nested root, not flattened key paths. Koanf's lookup delimiter
+	// does not split literal filenames or setting keys in this representation.
 	var cfg Config
 	if err := k.Unmarshal("", &cfg); err != nil {
 		return nil, fmt.Errorf("unmarshal config: %w", err)
@@ -46,6 +54,29 @@ func Load(path string) (*Config, error) {
 	}
 
 	return &cfg, nil
+}
+
+func validateFileMaps(value any) error {
+	if value == nil {
+		return nil
+	}
+	section, ok := value.(map[string]any)
+	if !ok {
+		return fmt.Errorf("config must be a mapping")
+	}
+	if section["files"] == nil {
+		return nil
+	}
+	files, ok := section["files"].(map[string]any)
+	if !ok {
+		return fmt.Errorf("config.files must be a mapping")
+	}
+	for name, values := range files {
+		if _, ok := values.(map[string]any); !ok {
+			return fmt.Errorf("config.files[%q] must be a mapping", name)
+		}
+	}
+	return nil
 }
 
 // loadFile loads the file at path, choosing a parser from its extension.
@@ -68,6 +99,10 @@ func loadFile(k *koanf.Koanf, path string) error {
 
 // envTransform maps MINECART_SERVER_MEMORY to server.memory.
 func envTransform(s string) string {
+	// This variable selects the input file; it is not a configuration value.
+	if s == "MINECART_CONFIG" {
+		return ""
+	}
 	s = strings.TrimPrefix(s, "MINECART_")
 	return strings.ReplaceAll(strings.ToLower(s), "_", ".")
 }
