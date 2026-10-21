@@ -28,3 +28,12 @@ config:
       rcon.port: 25575
       # Properties accept strings, numbers, and booleans, including empty strings.
       resource-pack: ""
+
+    # For a Paper server (server.type: paper), YAML files can also be managed:
+    # config/paper-global.yml:
+    #   proxies:
+    #     velocity:
+    #       enabled: true
+    #       online-mode: true
+    # Any .yml/.yaml path is supported. Nested maps merge, lists replace,
+    # explicit nulls store null, and type changes replace the previous value.

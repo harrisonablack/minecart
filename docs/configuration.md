@@ -29,6 +29,12 @@ config:
 
     plugins/example/settings.properties:
       enabled: true
+
+    config/paper-global.yml:
+      proxies:
+        velocity:
+          enabled: true
+          online-mode: true
 ```
 
 Destinations are relative to `directory` (itself relative to Minecart's working
@@ -48,6 +54,34 @@ The library handles escaping and continuation lines. `${...}` expressions are
 literal text, without property or environment interpolation.
 If the library cannot serialize the merged keys and values without loss, Minecart
 reports an error and preserves the original file.
+
+### YAML files
+
+Any `.yml` or `.yaml` destination is supported, including Paper and plugin
+configuration files. Each file's declaration must be a mapping. Use nested YAML
+maps for nested settings; dots in keys remain literal.
+
+Minecart uses a separate Koanf instance for each destination, loading the
+existing YAML and overlaying the declaration with Koanf's native merge behavior:
+
+| Declaration | Result |
+| --- | --- |
+| Mapping over a mapping | Recursively merge; preserve undeclared children. |
+| List | Replace the entire existing value, including lists of mappings. |
+| Empty list (`[]`) | Replace the existing value with an empty list. |
+| Explicit `null` | Store null; the key remains present. |
+| Different value type | Replace the old value with the declared value. |
+| Empty mapping (`{}`) over a mapping | Preserve the existing mapping's children. |
+
+For example, declaring `plugins: [one, two]` replaces the stored list; it does
+not append to it. Removing that declaration leaves the stored list alone.
+Declaring `plugins: null` instead stores a null value. An empty mapping replaces
+a scalar or list with an empty mapping, but does not clear an existing mapping.
+
+Existing YAML must contain a single mapping document. Empty files and null
+documents are treated as empty configurations. Malformed YAML, duplicate keys,
+non-mapping roots, and multiple documents are errors. YAML comments, formatting,
+and anchor notation are not preserved.
 
 ## Ownership and launch behavior
 

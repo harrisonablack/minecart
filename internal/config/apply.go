@@ -32,8 +32,10 @@ func Apply(logger *slog.Logger, cfg Config) error {
 		switch strings.ToLower(filepath.Ext(name)) {
 		case ".properties":
 			data, err = mergeProperties(path, values)
+		case ".yml", ".yaml":
+			data, err = mergeYAML(path, values)
 		default:
-			err = fmt.Errorf("unsupported configuration format %q (want .properties)", filepath.Ext(name))
+			err = fmt.Errorf("unsupported configuration format %q (want .properties, .yml, or .yaml)", filepath.Ext(name))
 		}
 		if err != nil {
 			return fmt.Errorf("apply config %q: %w", path, err)

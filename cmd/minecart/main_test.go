@@ -16,6 +16,7 @@ import (
 
 	"github.com/harrisonablack/minecart/internal/manifest"
 	"github.com/magiconair/properties"
+	"go.yaml.in/yaml/v3"
 )
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
@@ -56,6 +57,9 @@ if [ "$1" = "-XshowSettings:properties" ]; then
 fi
 if [ -f server.properties ]; then
   cp server.properties launched.properties
+fi
+if [ -f config/paper-global.yml ]; then
+  cp config/paper-global.yml launched.yml
 fi
 printf 'launched\n' >> launches
 `)
@@ -199,6 +203,89 @@ func TestConfigurationFailurePreventsLaunch(t *testing.T) {
 			}
 			if failure == "write error" && string(readTestFile(t, path)) != "motd=original\n" {
 				t.Fatal("write failure modified the existing file")
+			}
+		})
+	}
+}
+
+func TestYAMLConfigurationAppliedBeforeEveryLaunch(t *testing.T) {
+	dir := setupMinecart(t)
+	server := filepath.Join(dir, "server")
+	writeTestFile(t, filepath.Join(server, "config/paper-global.yml"), "proxies:\n  velocity:\n    enabled: false\n    secret: retained\n")
+	for i, enabled := range []bool{true, false} {
+		writeDeclarations(t, dir, fmt.Sprintf(`    config/paper-global.yml:
+      proxies:
+        velocity:
+          enabled: %t
+`, enabled))
+		var before []byte
+		if i > 0 {
+			before = readTestFile(t, manifest.Path(server))
+		}
+		out, err := invokeMinecart(t, dir)
+		if err != nil {
+			t.Fatalf("launch %d: %v\n%s", i, err, out)
+		}
+		if i > 0 && (!strings.Contains(out, "already current") || !bytes.Equal(before, readTestFile(t, manifest.Path(server)))) {
+			t.Fatalf("configuration edit did not reuse the installation:\n%s", out)
+		}
+		var launched struct {
+			Proxies struct {
+				Velocity struct {
+					Enabled bool
+					Secret  string
+				}
+			}
+		}
+		if err := yaml.Unmarshal(readTestFile(t, filepath.Join(server, "launched.yml")), &launched); err != nil {
+			t.Fatal(err)
+		}
+		if launched.Proxies.Velocity.Enabled != enabled || launched.Proxies.Velocity.Secret != "retained" {
+			t.Fatalf("server did not see merged YAML: %+v", launched)
+		}
+	}
+}
+
+func TestYAMLFailurePreventsLaunch(t *testing.T) {
+	for _, failure := range []string{"malformed", "read error", "write error", "trailing document"} {
+		t.Run(failure, func(t *testing.T) {
+			dir := setupMinecart(t)
+			server := filepath.Join(dir, "server")
+			path := filepath.Join(server, "config/paper-global.yml")
+			original := "setting: retained\n"
+			switch failure {
+			case "malformed":
+				original = "setting: ["
+			case "trailing document":
+				original = "setting: retained\n---\nbroken: ["
+			}
+			if failure == "read error" {
+				if err := os.MkdirAll(path, 0o755); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				writeTestFile(t, path, original)
+			}
+			if failure == "write error" {
+				if os.Geteuid() == 0 {
+					t.Skip("root bypasses directory write permissions")
+				}
+				parent := filepath.Dir(path)
+				if err := os.Chmod(parent, 0o555); err != nil {
+					t.Fatal(err)
+				}
+				t.Cleanup(func() { _ = os.Chmod(parent, 0o755) })
+			}
+			writeDeclarations(t, dir, "    config/paper-global.yml: {setting: new}\n")
+			out, err := invokeMinecart(t, dir)
+			if err == nil || !strings.Contains(out, "apply configuration") || !strings.Contains(out, "paper-global.yml") {
+				t.Fatalf("expected YAML application failure: %v\n%s", err, out)
+			}
+			if _, err := os.Stat(filepath.Join(server, "launches")); !os.IsNotExist(err) {
+				t.Fatalf("server launched after YAML failure: %v", err)
+			}
+			if failure != "read error" && string(readTestFile(t, path)) != original {
+				t.Fatal("YAML failure modified the existing file")
 			}
 		})
 	}
