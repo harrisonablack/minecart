@@ -2,15 +2,14 @@ package platform
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/harrisonablack/minecart/internal/artifact"
+	"github.com/harrisonablack/minecart/internal/httpx"
 	"github.com/harrisonablack/minecart/internal/manifest"
-	"github.com/harrisonablack/minecart/internal/version"
 )
 
 const vanillaManifestURL = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
@@ -38,7 +37,7 @@ func (v vanilla) resolve(ctx context.Context, version string) (Resolved, error) 
 	}
 
 	var vm versionManifest
-	if err := getJSON(ctx, client, manifestURL, &vm); err != nil {
+	if err := httpx.GetJSON(ctx, client, manifestURL, &vm); err != nil {
 		return Resolved{}, fmt.Errorf("vanilla: fetch manifest: %w", err)
 	}
 
@@ -55,7 +54,7 @@ func (v vanilla) resolve(ctx context.Context, version string) (Resolved, error) 
 	}
 
 	var vj versionJSON
-	if err := getJSON(ctx, client, versionURL, &vj); err != nil {
+	if err := httpx.GetJSON(ctx, client, versionURL, &vj); err != nil {
 		return Resolved{}, fmt.Errorf("vanilla: fetch version %q: %w", version, err)
 	}
 
@@ -109,25 +108,4 @@ type versionJSON struct {
 			URL  string `json:"url"`
 		} `json:"server"`
 	} `json:"downloads"`
-}
-
-// getJSON performs a GET request and decodes the JSON response into out.
-func getJSON(ctx context.Context, client *http.Client, url string, out any) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return fmt.Errorf("build request: %w", err)
-	}
-	req.Header.Set("User-Agent", version.UserAgent)
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("request: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status %d", resp.StatusCode)
-	}
-
-	return json.NewDecoder(resp.Body).Decode(out)
 }

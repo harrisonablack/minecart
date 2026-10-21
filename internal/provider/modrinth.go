@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"sort"
@@ -10,7 +9,7 @@ import (
 
 	"github.com/harrisonablack/minecart/internal/artifact"
 	"github.com/harrisonablack/minecart/internal/config"
-	"github.com/harrisonablack/minecart/internal/version"
+	"github.com/harrisonablack/minecart/internal/httpx"
 )
 
 const modrinthBaseURL = "https://api.modrinth.com/v2"
@@ -53,7 +52,7 @@ func (m Modrinth) resolvePinned(ctx context.Context, client *http.Client, baseUR
 	url := fmt.Sprintf("%s/project/%s/version/%s", baseURL, spec.Name, spec.Version)
 
 	var v modrinthVersion
-	if err := getJSON(ctx, client, url, &v); err != nil {
+	if err := httpx.GetJSON(ctx, client, url, &v); err != nil {
 		return artifact.Artifact{}, fmt.Errorf("modrinth: %w", err)
 	}
 
@@ -83,7 +82,7 @@ func (m Modrinth) resolveLatest(ctx context.Context, client *http.Client, baseUR
 	url := fmt.Sprintf("%s/project/%s/version", baseURL, spec.Name)
 
 	var versions []modrinthVersion
-	if err := getJSON(ctx, client, url, &versions); err != nil {
+	if err := httpx.GetJSON(ctx, client, url, &versions); err != nil {
 		return artifact.Artifact{}, fmt.Errorf("modrinth: %w", err)
 	}
 
@@ -193,25 +192,4 @@ func contains(s []string, target string) bool {
 		}
 	}
 	return false
-}
-
-// getJSON performs a GET request and decodes the JSON response into out.
-func getJSON(ctx context.Context, client *http.Client, url string, out any) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return fmt.Errorf("build request: %w", err)
-	}
-	req.Header.Set("User-Agent", version.UserAgent)
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("request: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status %d", resp.StatusCode)
-	}
-
-	return json.NewDecoder(resp.Body).Decode(out)
 }
