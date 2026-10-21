@@ -90,10 +90,11 @@ server:
   memory: 2G
   jvm_flags: ["-Xms2G", "-XX:+UseG1GC"]
   args: ["-nogui"]
-mods:
-  - name: fabric-api
-    provider: modrinth
-    version: "0.115.0"
+resources:
+  plugins:
+    - name: fabric-api
+      provider: modrinth
+      version: "0.115.0"
 `)
 
 	cfg, err := Load(path)
@@ -122,21 +123,21 @@ mods:
 	if len(cfg.Server.Args) != 1 || cfg.Server.Args[0] != "-nogui" {
 		t.Errorf("Server.Args = %v, want [-nogui]", cfg.Server.Args)
 	}
-	if len(cfg.Mods) != 1 {
-		t.Fatalf("len(Mods) = %d, want 1", len(cfg.Mods))
+	if len(cfg.Resources.Plugins) != 1 {
+		t.Fatalf("len(Resources.Plugins) = %d, want 1", len(cfg.Resources.Plugins))
 	}
-	if cfg.Mods[0].Name != "fabric-api" {
-		t.Errorf("Mods[0].Name = %q, want %q", cfg.Mods[0].Name, "fabric-api")
+	if cfg.Resources.Plugins[0].Name != "fabric-api" {
+		t.Errorf("Resources.Plugins[0].Name = %q, want %q", cfg.Resources.Plugins[0].Name, "fabric-api")
 	}
-	if cfg.Mods[0].Provider != "modrinth" {
-		t.Errorf("Mods[0].Provider = %q, want %q", cfg.Mods[0].Provider, "modrinth")
+	if cfg.Resources.Plugins[0].Provider != "modrinth" {
+		t.Errorf("Resources.Plugins[0].Provider = %q, want %q", cfg.Resources.Plugins[0].Provider, "modrinth")
 	}
 }
 
 func TestLoadJSON(t *testing.T) {
 	path := writeFile(t, "minecart.json", `{
   "server": {"type": "fabric", "version": "1.21.4", "eula": true},
-  "mods": [{"name": "lithium", "provider": "modrinth", "version": "0.14.0"}]
+  "resources": {"plugins": [{"name": "lithium", "provider": "modrinth", "version": "0.14.0"}]}
 }`)
 
 	cfg, err := Load(path)
@@ -146,8 +147,44 @@ func TestLoadJSON(t *testing.T) {
 	if cfg.Server.Type != "fabric" {
 		t.Errorf("Server.Type = %q, want %q", cfg.Server.Type, "fabric")
 	}
-	if len(cfg.Mods) != 1 || cfg.Mods[0].Name != "lithium" {
-		t.Errorf("Mods = %v, want [lithium]", cfg.Mods)
+	if len(cfg.Resources.Plugins) != 1 || cfg.Resources.Plugins[0].Name != "lithium" {
+		t.Errorf("Resources.Plugins = %v, want [lithium]", cfg.Resources.Plugins)
+	}
+}
+
+func TestLoadResources(t *testing.T) {
+	path := writeFile(t, "minecart.yml", `
+directory: server
+server:
+  type: paper
+  version: "1.21.4"
+  eula: true
+resources:
+  sync: true
+  plugins:
+    - name: luckperms
+      provider: modrinth
+    - name: viaversion
+      provider: modrinth
+      version: 5.2.1
+      channel: beta
+`)
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if !cfg.Resources.Sync {
+		t.Error("Resources.Sync = false, want true")
+	}
+	if len(cfg.Resources.Plugins) != 2 {
+		t.Fatalf("len(Resources.Plugins) = %d, want 2", len(cfg.Resources.Plugins))
+	}
+	if cfg.Resources.Plugins[0].Name != "luckperms" || cfg.Resources.Plugins[0].Version != "" {
+		t.Errorf("Plugins[0] = %+v, want luckperms with empty version", cfg.Resources.Plugins[0])
+	}
+	if cfg.Resources.Plugins[1].Name != "viaversion" || cfg.Resources.Plugins[1].Version != "5.2.1" || cfg.Resources.Plugins[1].Channel != "beta" {
+		t.Errorf("Plugins[1] = %+v, want viaversion 5.2.1 beta", cfg.Resources.Plugins[1])
 	}
 }
 
@@ -217,20 +254,36 @@ func TestValidate(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "mod missing name",
+			name: "plugin missing name",
 			cfg: Config{
-				Server: valid,
-				Mods:   []ModSpec{{Provider: "modrinth"}},
+				Server:    valid,
+				Resources: ResourcesConfig{Plugins: []ResourceSpec{{Provider: "modrinth"}}},
 			},
 			wantErr: true,
 		},
 		{
-			name: "mod missing provider",
+			name: "plugin missing provider",
 			cfg: Config{
-				Server: valid,
-				Mods:   []ModSpec{{Name: "lithium"}},
+				Server:    valid,
+				Resources: ResourcesConfig{Plugins: []ResourceSpec{{Name: "lithium"}}},
 			},
 			wantErr: true,
+		},
+		{
+			name: "plugin invalid channel",
+			cfg: Config{
+				Server:    valid,
+				Resources: ResourcesConfig{Plugins: []ResourceSpec{{Name: "lithium", Provider: "modrinth", Channel: "nightly"}}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "plugin valid channel",
+			cfg: Config{
+				Server:    valid,
+				Resources: ResourcesConfig{Plugins: []ResourceSpec{{Name: "lithium", Provider: "modrinth", Channel: "beta"}}},
+			},
+			wantErr: false,
 		},
 	}
 

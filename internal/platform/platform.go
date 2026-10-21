@@ -25,6 +25,8 @@ type Resolved struct {
 	// Identity is an opaque, platform-defined id that changes whenever the
 	// resolved server changes (e.g. a new build).
 	Identity string
+	// MinecraftVersion is the concrete MC version after resolving "latest".
+	MinecraftVersion string
 }
 
 // Resolve resolves the server for the given server config.

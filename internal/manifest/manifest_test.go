@@ -95,3 +95,47 @@ func TestReadInvalid(t *testing.T) {
 		t.Fatal("Read: expected error for invalid YAML, got nil")
 	}
 }
+
+func TestPluginRoundTrip(t *testing.T) {
+	path := Path(t.TempDir())
+	m := Manifest{
+		Type:        "paper",
+		Identity:    "paper-1.21.4-232",
+		Entry:       Entry{Type: EntryJava, Point: "paper-1.21.4-232.jar"},
+		InstalledAt: time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC),
+		Plugins: []Plugin{
+			{Name: "luckperms", Provider: "modrinth", Version: "5.2.1", Filename: "luckperms-5.2.1.jar", Hashes: map[string]string{"sha512": "abc"}},
+			{Name: "viaversion", Provider: "modrinth", Version: "5.2.1", Filename: "viaversion-5.2.1.jar"},
+		},
+	}
+	if err := Write(path, m); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	got, err := Read(path)
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+	if !reflect.DeepEqual(got, m) {
+		t.Errorf("Read() = %+v, want %+v", got, m)
+	}
+}
+
+func TestWriteOmitsEmptyPlugins(t *testing.T) {
+	path := Path(t.TempDir())
+	m := Manifest{
+		Type:        "paper",
+		Identity:    "paper-1.21.4-232",
+		Entry:       Entry{Type: EntryJava, Point: "paper-1.21.4-232.jar"},
+		InstalledAt: time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC),
+	}
+	if err := Write(path, m); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read manifest: %v", err)
+	}
+	if strings.Contains(string(data), "plugins:") {
+		t.Errorf("manifest should omit empty plugins:\n%s", data)
+	}
+}

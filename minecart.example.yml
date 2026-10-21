@@ -16,6 +16,20 @@ server:
   # Extra arguments passed to the server.
   args: ["nogui"]
 
+# Install Paper plugins alongside the server (server.type: paper only).
+# resources:
+#   # Remove plugins that are no longer declared (default false).
+#   sync: false
+#   plugins:
+#     - name: luckperms
+#       provider: modrinth
+#       # version omitted -> latest compatible with the server's MC version.
+#       # channel: stable | beta | alpha (default stable)
+#     - name: viaversion
+#       provider: modrinth
+#       version: 5.2.1
+#       channel: beta
+
 # Merge these values into files before every server launch.
 # Paths are relative to directory. Omit config.files to manage no files.
 # Undeclared values survive; removing a declaration does not reset its value.

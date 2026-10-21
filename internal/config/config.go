@@ -7,10 +7,19 @@ import (
 
 // Config is the top-level minecart configuration.
 type Config struct {
-	Directory string       `koanf:"directory"`
-	Server    ServerConfig `koanf:"server"`
-	Mods      []ModSpec    `koanf:"mods"`
-	Config    FileConfig   `koanf:"config"`
+	Directory string          `koanf:"directory"`
+	Server    ServerConfig    `koanf:"server"`
+	Resources ResourcesConfig `koanf:"resources"`
+	Config    FileConfig      `koanf:"config"`
+}
+
+// ResourcesConfig declares resources to install alongside the server. Plugins
+// is the first resource type; future types (mods, datapacks, ...) slot in as
+// siblings.
+type ResourcesConfig struct {
+	// Sync removes manifest-tracked resources that are no longer declared.
+	Sync    bool           `koanf:"sync"`
+	Plugins []ResourceSpec `koanf:"plugins"`
 }
 
 // FileConfig declares values to merge into files relative to Directory.
@@ -31,11 +40,12 @@ type ServerConfig struct {
 	Args     []string `koanf:"args"`
 }
 
-// ModSpec is a declarative description of a single mod to install.
-type ModSpec struct {
+// ResourceSpec is a declarative description of a single resource to install.
+type ResourceSpec struct {
 	Name     string `koanf:"name"`
 	Provider string `koanf:"provider"`
-	Version  string `koanf:"version"`
+	Version  string `koanf:"version"` // empty or "latest" -> latest compatible
+	Channel  string `koanf:"channel"` // stable | beta | alpha; default stable
 }
 
 // Validate reports whether the configuration is complete enough to act on.
@@ -49,12 +59,17 @@ func (c *Config) Validate() error {
 	if !c.Server.Eula {
 		return errors.New("server.eula must be true (accept the Minecraft EULA)")
 	}
-	for i, m := range c.Mods {
-		if m.Name == "" {
-			return fmt.Errorf("mods[%d].name is required", i)
+	for i, p := range c.Resources.Plugins {
+		if p.Name == "" {
+			return fmt.Errorf("resources.plugins[%d].name is required", i)
 		}
-		if m.Provider == "" {
-			return fmt.Errorf("mods[%d].provider is required", i)
+		if p.Provider == "" {
+			return fmt.Errorf("resources.plugins[%d].provider is required", i)
+		}
+		switch p.Channel {
+		case "", "stable", "beta", "alpha":
+		default:
+			return fmt.Errorf("resources.plugins[%d].channel must be one of stable, beta, alpha (got %q)", i, p.Channel)
 		}
 	}
 	return nil

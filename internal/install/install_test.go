@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/harrisonablack/minecart/internal/artifact"
 	"github.com/harrisonablack/minecart/internal/manifest"
@@ -313,6 +314,46 @@ func TestInstallServerWritesManifest(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dir, "paper-1.21.4-52.jar")); err != nil {
 		t.Errorf("jar should exist, stat err = %v", err)
+	}
+}
+
+func TestInstallServerPreservesPlugins(t *testing.T) {
+	content := []byte("build 53")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		writeResponse(t, w, content)
+	}))
+	t.Cleanup(srv.Close)
+
+	dir := t.TempDir()
+
+	// Seed a manifest with a plugin, as a previous install would have.
+	seed := manifest.Manifest{
+		Type:        "paper",
+		Identity:    "paper-1.21.4-52",
+		Entry:       manifest.Entry{Type: manifest.EntryJava, Point: "paper-1.21.4-52.jar"},
+		InstalledAt: time.Now().UTC(),
+		Plugins: []manifest.Plugin{
+			{Name: "luckperms", Provider: "modrinth", Version: "1.0.0", Filename: "luckperms-1.0.0.jar"},
+		},
+	}
+	if err := manifest.Write(manifest.Path(dir), seed); err != nil {
+		t.Fatalf("write seed manifest: %v", err)
+	}
+
+	resolved := paperResolved(srv.URL, 53, content)
+	if err := installServer(context.Background(), discardLogger(), "paper", resolved, dir); err != nil {
+		t.Fatalf("installServer: %v", err)
+	}
+
+	got, err := manifest.Read(manifest.Path(dir))
+	if err != nil {
+		t.Fatalf("read manifest: %v", err)
+	}
+	if got.Identity != resolved.Identity {
+		t.Errorf("Identity = %q, want %q", got.Identity, resolved.Identity)
+	}
+	if len(got.Plugins) != 1 || got.Plugins[0].Name != "luckperms" {
+		t.Errorf("Plugins = %+v, want [luckperms] preserved", got.Plugins)
 	}
 }
 

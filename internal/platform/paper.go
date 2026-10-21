@@ -72,8 +72,9 @@ func (p paper) resolve(ctx context.Context, version string) (Resolved, error) {
 			Hashes:   map[string]string{"sha256": dl.Checksums.SHA256},
 			Size:     dl.Size,
 		},
-		Entry:    manifest.Entry{Type: manifest.EntryJava, Point: filename},
-		Identity: fmt.Sprintf("paper-%s-%d", version, build.ID),
+		Entry:            manifest.Entry{Type: manifest.EntryJava, Point: filename},
+		Identity:         fmt.Sprintf("paper-%s-%d", version, build.ID),
+		MinecraftVersion: version,
 	}, nil
 }
 

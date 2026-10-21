@@ -83,6 +83,39 @@ documents are treated as empty configurations. Malformed YAML, duplicate keys,
 non-mapping roots, and multiple documents are errors. YAML comments, formatting,
 and anchor notation are not preserved.
 
+## Resources
+
+Minecart can install Paper plugins alongside the server. Declare them under
+`resources.plugins`:
+
+```yaml
+resources:
+  sync: false
+  plugins:
+    - name: luckperms
+      provider: modrinth
+    - name: viaversion
+      provider: modrinth
+      version: 5.2.1
+      channel: beta
+```
+
+- `resources` is the umbrella; `plugins` is the first resource type. Future
+  types (`mods`, `datapacks`, ...) slot in as siblings.
+- `sync` (optional, default `false`) removes manifest-tracked plugins that are
+  no longer declared. Leave it blank or `false` to keep undeclared plugins.
+- Each plugin requires `name` (the Modrinth project slug) and `provider`
+  (currently only `modrinth`).
+- `version` (optional) pins a specific version. Omit it or set `latest` to
+  resolve the newest version compatible with the server's Minecraft version.
+- `channel` (optional, default `stable`) is a minimum-stability threshold used
+  only for `latest` resolution: `stable` accepts `release` only, `beta` accepts
+  `release` and `beta`, and `alpha` accepts `release`, `beta`, and `alpha`.
+
+Plugins are installed into `plugins/` under `directory`. Only Paper servers
+(`server.type: paper`) install plugins; declaring plugins for any other server
+type logs a warning and skips installation.
+
 ## Ownership and launch behavior
 
 On every invocation, Minecart installs or updates the server, then applies the

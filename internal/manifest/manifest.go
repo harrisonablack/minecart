@@ -35,6 +35,16 @@ type Manifest struct {
 	Entry       Entry             `yaml:"entry"`
 	Hashes      map[string]string `yaml:"hashes,omitempty"` // algorithm -> hex digest
 	InstalledAt time.Time         `yaml:"installed_at"`
+	Plugins     []Plugin          `yaml:"plugins,omitempty"`
+}
+
+// Plugin records an installed plugin. Its identity key is (name, provider).
+type Plugin struct {
+	Name     string            `yaml:"name"`
+	Provider string            `yaml:"provider"`
+	Version  string            `yaml:"version"`
+	Filename string            `yaml:"filename"`
+	Hashes   map[string]string `yaml:"hashes,omitempty"`
 }
 
 // Path returns the manifest path within dir.

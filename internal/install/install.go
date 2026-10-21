@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/harrisonablack/minecart/internal/artifact"
 	"github.com/harrisonablack/minecart/internal/config"
 	"github.com/harrisonablack/minecart/internal/manifest"
 	"github.com/harrisonablack/minecart/internal/platform"
@@ -35,6 +36,10 @@ func Run(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
 	}
 	logger.Info("wrote eula.txt", "directory", cfg.Directory)
 
+	if err := installResources(ctx, logger, cfg, resolved.MinecraftVersion); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -49,7 +54,7 @@ func installServer(ctx context.Context, logger *slog.Logger, serverType string, 
 	}
 
 	dest := filepath.Join(dir, resolved.Artifact.Filename)
-	if existing.Identity == resolved.Identity && fileMatches(resolved, dest) {
+	if existing.Identity == resolved.Identity && fileMatches(resolved.Artifact, dest) {
 		logger.Info("already current", "identity", resolved.Identity, "file", dest)
 		return nil
 	}
@@ -68,6 +73,7 @@ func installServer(ctx context.Context, logger *slog.Logger, serverType string, 
 		Entry:       resolved.Entry,
 		Hashes:      resolved.Artifact.Hashes,
 		InstalledAt: time.Now().UTC(),
+		Plugins:     existing.Plugins,
 	}
 	if err := manifest.Write(path, m); err != nil {
 		return err
@@ -83,12 +89,12 @@ func installServer(ctx context.Context, logger *slog.Logger, serverType string, 
 	return nil
 }
 
-// fileMatches reports whether the resolved artifact is already present at
-// dest. It verifies the hash when one is available, otherwise it only checks
-// that the file exists.
-func fileMatches(resolved platform.Resolved, dest string) bool {
-	if algo, _ := strongestHash(resolved.Artifact.Hashes); algo != "" {
-		return matches(resolved.Artifact, dest)
+// fileMatches reports whether the artifact is already present at dest. It
+// verifies the hash when one is available, otherwise it only checks that the
+// file exists.
+func fileMatches(a artifact.Artifact, dest string) bool {
+	if algo, _ := strongestHash(a.Hashes); algo != "" {
+		return matches(a, dest)
 	}
 	_, err := os.Stat(dest)
 	return err == nil
