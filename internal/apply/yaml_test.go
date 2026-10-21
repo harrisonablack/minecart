@@ -1,4 +1,4 @@
-package config
+package apply
 
 import (
 	"bytes"
@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/harrisonablack/minecart/internal/config"
 	"github.com/knadh/koanf/parsers/yaml"
 )
 
@@ -54,7 +55,7 @@ config:
     plugins/example.config/settings.with.dots.yaml:
       isolated.key: [one, two]
 `, server))
-	cfg, err := Load(declarations)
+	cfg, err := config.Load(declarations)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,7 +132,7 @@ config:
       value: %s
       added.null: null
 `, dir, tt.declared))
-			cfg, err := Load(input)
+			cfg, err := config.Load(input)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -155,7 +156,7 @@ func TestApplyEmptyYAML(t *testing.T) {
 			dir := t.TempDir()
 			path := filepath.Join(dir, "settings.yml")
 			putFile(t, path, content)
-			cfg := Config{Directory: dir, Config: FileConfig{Files: map[string]map[string]any{
+			cfg := config.Config{Directory: dir, Config: config.FileConfig{Files: map[string]map[string]any{
 				"settings.yml": {"enabled": true},
 			}}}
 			if err := Apply(quietLogger(), cfg); err != nil {
@@ -177,7 +178,7 @@ func TestYAMLInputErrorsPreserveDestination(t *testing.T) {
 			dir := t.TempDir()
 			path := filepath.Join(dir, "settings.yml")
 			putFile(t, path, content)
-			cfg := Config{Directory: dir, Config: FileConfig{Files: map[string]map[string]any{
+			cfg := config.Config{Directory: dir, Config: config.FileConfig{Files: map[string]map[string]any{
 				"settings.yml": {"enabled": true},
 			}}}
 			if err := Apply(quietLogger(), cfg); err == nil || !strings.Contains(err.Error(), "settings.yml") {

@@ -45,9 +45,12 @@ func TestLoadFileDeclarations(t *testing.T) {
 			if len(props) != 3 || props["motd"] != "" || props["online-mode"] != true {
 				t.Fatalf("properties declaration = %#v", props)
 			}
-			// JSON numbers are float64, while YAML retains integers.
-			if got, err := propertyValue(props["rcon.port"]); err != nil || got != "25575" {
-				t.Fatalf("literal rcon.port = %q, %v", got, err)
+			// JSON numbers are float64, while YAML retains integers; both must be
+			// preserved as numbers (formatting is tested in the apply package).
+			switch props["rcon.port"].(type) {
+			case int, float64:
+			default:
+				t.Fatalf("literal rcon.port = %#v, want a number", props["rcon.port"])
 			}
 			want := map[string]any{
 				"query.port": "literal",
