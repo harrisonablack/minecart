@@ -1,4 +1,4 @@
-package config
+package apply
 
 import (
 	"bytes"
@@ -13,11 +13,21 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/harrisonablack/minecart/internal/config"
 	"github.com/magiconair/properties"
 )
 
 func quietLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
+}
+
+func writeFile(t *testing.T, name, content string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), name)
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write %s: %v", name, err)
+	}
+	return path
 }
 
 func putFile(t *testing.T, path, content string) {
@@ -53,7 +63,7 @@ func TestApplyProperties(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "server.properties")
 	putFile(t, path, "motd=old\ndifficulty=hard\nrcon.port=25575\ncontinued=hello\\\n  world\nliteral=${UNCHANGED}\nunicode=\\u00e9\n")
-	cfg := Config{Directory: dir, Config: FileConfig{Files: map[string]map[string]any{
+	cfg := config.Config{Directory: dir, Config: config.FileConfig{Files: map[string]map[string]any{
 		"server.properties": {
 			"motd":        "  Welcome\nLine two: = \\ ☃ 🚂",
 			"max-players": 20,
@@ -116,7 +126,7 @@ func TestApplyPropertiesRejectsCollectionsAndNull(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "server.properties")
 		putFile(t, path, "motd=original\n")
-		cfg := Config{Directory: dir, Config: FileConfig{Files: map[string]map[string]any{
+		cfg := config.Config{Directory: dir, Config: config.FileConfig{Files: map[string]map[string]any{
 			"server.properties": {"motd": value},
 		}}}
 		if err := Apply(quietLogger(), cfg); err == nil || !strings.Contains(err.Error(), `property "motd"`) {
@@ -140,7 +150,7 @@ func TestApplyNumericProperties(t *testing.T) {
     "ratio": 1.25
   }}}
 }`)
-			cfg, err := Load(input)
+			cfg, err := config.Load(input)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -160,7 +170,7 @@ func TestApplyPartialFailureAndRetry(t *testing.T) {
 	dir := t.TempDir()
 	bad := filepath.Join(dir, "b.properties")
 	putFile(t, bad, `bad=\uZZZZ`)
-	cfg := Config{Directory: dir, Config: FileConfig{Files: map[string]map[string]any{
+	cfg := config.Config{Directory: dir, Config: config.FileConfig{Files: map[string]map[string]any{
 		"a.properties": {"value": "new"},
 		"b.properties": {"value": "new"},
 	}}}
@@ -189,7 +199,7 @@ func TestApplyPropertiesPreservesFileOnEncodingFailure(t *testing.T) {
 	// Our integration must report the loss instead of replacing the file.
 	const original = "\\!key=retained\nmotd=original\n"
 	putFile(t, path, original)
-	cfg := Config{Directory: dir, Config: FileConfig{Files: map[string]map[string]any{
+	cfg := config.Config{Directory: dir, Config: config.FileConfig{Files: map[string]map[string]any{
 		"server.properties": {"motd": "new"},
 	}}}
 	if err := Apply(quietLogger(), cfg); err == nil || !strings.Contains(err.Error(), "without loss") {
@@ -203,7 +213,7 @@ func TestApplyPropertiesPreservesFileOnEncodingFailure(t *testing.T) {
 func TestApplyInvalidDestinations(t *testing.T) {
 	for _, name := range []string{"../outside.properties", "/outside.properties", "", "settings.json"} {
 		t.Run(name, func(t *testing.T) {
-			cfg := Config{Directory: t.TempDir(), Config: FileConfig{Files: map[string]map[string]any{
+			cfg := config.Config{Directory: t.TempDir(), Config: config.FileConfig{Files: map[string]map[string]any{
 				name: {"motd": "hello"},
 			}}}
 			if err := Apply(quietLogger(), cfg); err == nil {

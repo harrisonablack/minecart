@@ -1,4 +1,5 @@
-package config
+// Package apply merges declared configuration into server files before launch.
+package apply
 
 import (
 	"crypto/rand"
@@ -10,12 +11,14 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/harrisonablack/minecart/internal/config"
 )
 
 // Apply merges declared values into configuration files before a server launch.
 // Each file is replaced atomically. If a later file fails, earlier successful
 // writes remain in place and the caller must abort the launch.
-func Apply(logger *slog.Logger, cfg Config) error {
+func Apply(logger *slog.Logger, cfg config.Config) error {
 	for _, name := range slices.Sorted(maps.Keys(cfg.Config.Files)) {
 		if !filepath.IsLocal(name) {
 			return fmt.Errorf("config.files[%q]: destination must be relative to the server directory", name)

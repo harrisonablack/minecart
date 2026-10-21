@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 
+	"github.com/harrisonablack/minecart/internal/apply"
 	"github.com/harrisonablack/minecart/internal/config"
 	"github.com/harrisonablack/minecart/internal/install"
 	"github.com/harrisonablack/minecart/internal/log"
@@ -26,7 +27,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := config.Apply(logger, *cfg); err != nil {
+	if err := apply.Apply(logger, *cfg); err != nil {
 		logger.Error("apply configuration", "error", err)
 		os.Exit(1)
 	}
